@@ -1,0 +1,452 @@
+/* ANDROID-ONLY: Capacitor touch-ui scaling (Android www/assets only). */
+
+body.touch-ui #controls-container {
+    background: transparent;
+    z-index: 101;
+}
+body.touch-ui {
+    cursor: auto;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 100dvh;
+}
+body.touch-ui #bg-stack,
+body.touch-ui #viz-wrap,
+body.touch-ui #bg-vignette {
+    left: 0; right: 0; top: 0; bottom: 0;
+}
+body.touch-ui .top-trigger,
+body.touch-ui .btn,
+body.touch-ui .panel-row,
+body.touch-ui .panel-row-main,
+body.touch-ui .panel-row-action,
+body.touch-ui .search-filter-chip,
+body.touch-ui .artist-provider-chip { cursor: pointer; }
+body.touch-ui .panel-row:active,
+body.touch-ui .panel-row-main:active,
+body.touch-ui .panel-row-action:active {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+body.touch-ui .artist-provider-chip.active:not(.focused),
+body.touch-ui .search-filter-chip.active:not(.focused) {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    border-color: rgba(255,255,255,0.35);
+    color: #fff;
+}
+body.touch-ui #top-bar {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    gap: 8px;
+}
+body.touch-ui.show-ui #top-bar,
+body.touch-ui.menu-open #top-bar,
+body.touch-ui.nav-menu-open #top-bar,
+body.touch-ui.volume-menu-open #top-bar,
+body.touch-ui.panel-open #top-bar {
+    top: max(0px, env(safe-area-inset-top, 0px));
+}
+body.touch-ui .top-trigger {
+    width: 40px; height: 40px;
+    border-radius: 0 0 14px 14px;
+}
+body.touch-ui .top-trigger .top-icon { width: 20px; height: 20px; }
+body.touch-ui .top-trigger svg { width: 22px; height: 22px; }
+body.touch-ui .top-trigger.focused { transform: scale(1.05); }
+body.touch-ui h1 { font-size: 1.78rem; font-weight: 500; letter-spacing: -0.5px; }
+body.touch-ui #title-measure {
+    font-size: 1.78rem; font-weight: 500; letter-spacing: -0.5px;
+}
+body.touch-ui h2 { font-size: 1.28rem; margin-top: 6px; font-weight: 400; }
+body.touch-ui .cover-wrapper {
+    width: min(36vh, 58vw); height: min(36vh, 58vw);
+    margin-bottom: 14px; border-radius: 14px;
+}
+body.touch-ui .info { min-width: 0; max-width: 88vw; }
+body.touch-ui #controls-container {
+    height: auto; min-height: 88px; left: 0; width: 100%;
+    box-sizing: border-box; padding-top: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(10px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    padding-right: max(10px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    align-items: center; justify-content: center; gap: 2px;
+}
+body.touch-ui .btn { width: 48px; height: 48px; margin: 0 5px; border-width: 1px; }
+body.touch-ui .btn-play { width: 54px; height: 54px; margin: 0 7px; }
+body.touch-ui .btn svg { width: 22px; height: 22px; }
+body.touch-ui .btn-play svg { width: 26px; height: 26px; }
+body.touch-ui .btn-sm { width: 38px; height: 38px; margin: 0 4px; }
+body.touch-ui .btn-sm .btn-icon { width: 18px; height: 18px; }
+body.touch-ui .btn.focused, body.touch-ui .btn:focus-visible { transform: scale(1.08); }
+body.touch-ui .progress-wrapper {
+    width: min(94vw, 560px); gap: 10px;
+    bottom: var(--progress-bottom, 72px); left: 50%;
+    padding-left: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    padding-right: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+}
+body.touch-ui.show-ui .progress-wrapper { transform: translateX(-50%) translateY(0); }
+body.touch-ui .time-label { font-size: 0.75rem; width: 42px; }
+body.touch-ui .progress-container { height: 8px; }
+body.touch-ui #idle-progress { bottom: env(safe-area-inset-bottom, 0px); }
+body.touch-ui #status-bar {
+    top: max(8px, env(safe-area-inset-top, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+}
+@media (orientation: portrait) {
+    body.touch-ui .media-panel,
+    body.touch-ui #guest-access-overlay { left: 0; }
+    body.android.touch-ui .media-panel,
+    body.android.touch-ui #guest-access-overlay { border-left: none; }
+}
+@media (orientation: landscape) {
+    body.touch-ui .media-panel,
+    body.touch-ui #guest-access-overlay { left: 40%; }
+}
+@media (orientation: portrait) {
+    body.android.touch-ui .media-panel {
+        transform: translateY(100%);
+        transition: transform 0.335s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.android.touch-ui .media-panel.open {
+        transform: translateY(0);
+    }
+    body.android.touch-ui.panel-open #player-stage {
+        left: 50% !important;
+        top: 12% !important;
+        transform: translate(-50%, -50%) scale(0.72) !important;
+        opacity: 0.18;
+        pointer-events: none;
+        transition: transform 0.335s cubic-bezier(0.4, 0, 0.2, 1),
+            top 0.335s cubic-bezier(0.4, 0, 0.2, 1),
+            opacity 0.25s ease;
+    }
+    body.touch-ui.panel-open #player-stage { opacity: 0.15; pointer-events: none; }
+}
+@media (orientation: landscape) {
+    body.touch-ui.panel-open #player-stage { opacity: 1; pointer-events: auto; }
+}
+body.touch-ui .panel-header {
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) 16px 12px;
+}
+body.touch-ui .panel-header h2 { font-size: 1.5rem; }
+body.touch-ui .panel-hint {
+    font-size: 1rem; font-weight: 400; margin-top: 6px;
+    color: rgba(255,255,255,0.45);
+}
+body.touch-ui .panel-row { padding: 12px 10px; gap: 12px; margin-bottom: 6px; }
+body.touch-ui .panel-row-title { font-size: 1rem; }
+body.touch-ui .panel-row-subtitle { font-size: 0.82rem; margin-top: 3px; }
+body.touch-ui .panel-row-icon { width: 26px; height: 26px; }
+body.touch-ui .panel-section-header { padding: 12px 10px; gap: 12px; margin-bottom: 6px; border-radius: 12px; }
+body.touch-ui .panel-section-title { font-size: 1rem; }
+body.touch-ui .panel-section-icon { width: 26px; height: 26px; }
+body.touch-ui .panel-section-chevron { width: 20px; height: 20px; }
+body.touch-ui .panel-section-count { font-size: 0.82rem; }
+body.touch-ui .panel-row-icon.panel-row-thumb { width: 39px; height: 39px; }
+body.touch-ui .panel-row-provider { width: 20px; height: 20px; }
+body.touch-ui .panel-row-provider-slot { padding: 0 10px 0 8px; }
+body.touch-ui .panel-row-main { padding: 12px 8px 12px 12px; gap: 12px; }
+body.touch-ui .panel-row-action { width: 40px; }
+body.touch-ui .panel-row-action img { width: 20px; height: 20px; }
+body.touch-ui .panel-list { padding: 8px 8px 24px 10px; }
+body.touch-ui .panel-list::-webkit-scrollbar { width: 5px; }
+body.touch-ui .panel-list.panel-alpha-grid {
+    grid-template-columns: repeat(5, 1fr); gap: 8px;
+}
+body.touch-ui .panel-alpha-grid .panel-row { padding: 12px 6px; min-height: 48px; }
+body.touch-ui .panel-alpha-grid .panel-row-title { font-size: 1.25rem; font-weight: 600; }
+body.touch-ui .panel-alpha-grid .panel-row[data-letter="0-9"] .panel-row-title,
+body.touch-ui .panel-alpha-grid .panel-row[data-letter="!"] .panel-row-title {
+    font-size: 1.25rem;
+}
+body.touch-ui .panel-list.panel-root-grid {
+    grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+body.touch-ui .panel-root-grid .panel-row {
+    padding: 16px 10px; min-height: 100px; gap: 10px;
+}
+body.touch-ui .panel-root-grid .panel-row-icon { width: 30px; height: 30px; }
+body.touch-ui .panel-root-grid .panel-row-title { font-size: 0.82rem; line-height: 1.2; }
+body.android.touch-ui .bg-layer { filter: brightness(0.42) saturate(1.08); }
+body.android.touch-ui #viz-canvas {
+    filter: blur(8px) brightness(1.06) saturate(1.08);
+    -webkit-filter: blur(8px) brightness(1.06) saturate(1.08);
+}
+body.android .panel-back-btn {
+    min-width: 34px; min-height: 34px; padding: 6px; margin: 0 0 6px;
+    border-radius: 8px;
+}
+body.android .panel-back-btn img { width: 16px; height: 16px; }
+body.android .panel-header {
+    padding: max(10px, calc(env(safe-area-inset-top, 0px) + 8px)) 14px 10px;
+}
+body.android .panel-header.panel-header-compact {
+    padding-top: max(6px, calc(env(safe-area-inset-top, 0px) + 4px));
+    padding-bottom: 8px;
+}
+body.android .panel-header h2 { font-size: 1.25rem; }
+body.android.art-corner-info:not(.show-ui) #player-stage h1 {
+    font-size: 1.1rem;
+    line-height: 1.15;
+}
+body.android.art-corner-info:not(.show-ui) #player-stage h2 {
+    font-size: clamp(0.83rem, 3.2vw, 1.15rem);
+    margin-top: 0;
+    padding-top: 0;
+}
+body.android.art-corner-info:not(.show-ui) #player-stage #album-line:not([hidden]) {
+    font-size: clamp(0.77rem, 2.9vw, 1.02rem);
+    margin-top: 1px;
+    padding-top: 0;
+}
+body.android.art-corner-info.lyrics-open:not(.show-ui) #player-stage {
+    max-width: min(62vw, 480px);
+}
+@media (orientation: landscape) {
+    body.android.art-corner-info.lyrics-open:not(.show-ui) #player-stage {
+        max-width: min(calc(100vw - 38vw - 48px), 520px);
+    }
+    body.android.art-corner-info.lyrics-open:not(.show-ui) #player-stage h1 {
+        max-width: 100%;
+    }
+}
+body.touch-ui .bg-layer { filter: brightness(0.35) saturate(1.2); }
+body.touch-ui #settings-menu, body.touch-ui #nav-menu {
+    min-width: 0; max-width: min(280px, calc(100vw - 24px)); border-radius: 12px;
+}
+body.touch-ui .settings-menu-item { padding: 13px 16px; font-size: 1.05rem; gap: 12px; }
+body.touch-ui .queue-row-menu,
+body.touch-ui .browse-row-menu,
+body.touch-ui .players-row-menu {
+    min-width: 0; max-width: min(280px, calc(100vw - 24px));
+    padding: 8px; border-radius: 12px;
+}
+body.touch-ui .queue-row-menu-item,
+body.touch-ui .browse-row-menu-item,
+body.touch-ui .players-row-menu-item {
+    padding: 13px 16px; font-size: 0.92rem; gap: 12px;
+}
+body.touch-ui .queue-row-menu-item img,
+body.touch-ui .browse-row-menu-item img,
+body.touch-ui .players-row-menu-item img {
+    width: 20px; height: 20px;
+}
+body.touch-ui .menu-check { width: 20px; height: 20px; font-size: 0.8rem; }
+body.touch-ui #guest-access-overlay { overflow-y: auto; }
+body.touch-ui .guest-access-content {
+    padding: 16px 16px 24px; gap: 12px;
+}
+body.touch-ui .guest-access-content h2,
+body.touch-ui #guest-access-title { font-size: inherit; }
+body.touch-ui .guest-access-tagline {
+    font-size: 0.95rem; font-weight: 600; margin: 0;
+}
+body.android.touch-ui #guest-qr-img {
+    width: min(62vw, 180px); height: min(62vw, 180px); padding: 8px;
+}
+body.touch-ui .guest-access-message { font-size: 0.82rem; max-width: 100%; }
+body.touch-ui #setup-overlay .setup-panel-inner { max-width: 100%; }
+body.touch-ui .setup-panel-header {
+    padding: max(16px, env(safe-area-inset-top, 0px) + 8px) 16px 12px;
+}
+body.touch-ui .setup-panel-header h2 { font-size: 1.35rem; font-weight: 700; }
+body.touch-ui .setup-body { padding: 16px 16px max(24px, env(safe-area-inset-bottom, 0px) + 16px); }
+body.touch-ui .setup-lead { font-size: 0.88rem; margin-bottom: 16px; }
+body.touch-ui .setup-form { gap: 14px; }
+body.touch-ui .setup-label { font-size: 0.72rem; }
+body.touch-ui .setup-field-hint { font-size: 0.75rem; }
+body.touch-ui #setup-overlay input {
+    font-size: 1rem; padding: 12px 14px; border-radius: 10px;
+}
+body.touch-ui .setup-connect-btn { padding: 14px 16px; font-size: 1rem; }
+body.touch-ui .setup-error { font-size: 0.82rem; }
+body.touch-ui .setup-close-btn { width: 36px; height: 36px; border-radius: 10px; }
+body.touch-ui .browse-search-input {
+    font-size: 0.95rem; padding: 11px 14px; margin-top: 10px; border-radius: 10px;
+}
+body.touch-ui .browse-search-filters { gap: 6px; margin-top: 8px; margin-bottom: 0; }
+body.android .browse-search-input-toggle {
+    color: rgba(255,255,255,0.38);
+}
+body.android .browse-search-input-toggle-icon { font-size: 0.82rem; }
+body.touch-ui .search-filter-chip { padding: 7px 11px; font-size: 0.78rem; }
+body.touch-ui .search-provider-menu { max-height: 180px; margin-top: 8px; }
+body.touch-ui .search-provider-row { padding: 9px 8px; font-size: 0.85rem; gap: 10px; }
+body.touch-ui .search-provider-icon { width: 20px; height: 20px; }
+body.touch-ui .artist-provider-bar { gap: 6px; margin-top: 8px; }
+body.touch-ui .artist-provider-chip { padding: 6px 10px; font-size: 0.78rem; gap: 6px; }
+body.touch-ui .artist-provider-chip img { width: 16px; height: 16px; }
+body.touch-ui .container-action-chip { padding: 6px 10px; font-size: 0.78rem; gap: 6px; }
+body.touch-ui .container-action-chip img { width: 16px; height: 16px; }
+body.touch-ui.show-ui #player-stage {
+    transform: translate(-50%, calc(-50% - 36px)) scale(0.82) !important;
+}
+body.touch-ui.show-ui:not(.panel-open) #controls-container {
+    top: var(--controls-stack-top, auto);
+    bottom: auto;
+    transform: translateY(0);
+}
+@media (orientation: portrait) {
+    body.touch-ui #controls-container {
+        flex-wrap: nowrap; justify-content: center;
+        align-items: center;
+        min-height: 72px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+    }
+    body.touch-ui .progress-wrapper {
+        bottom: var(--progress-bottom, 48px);
+    }
+    body.touch-ui .btn { margin: 0 4px; }
+    body.touch-ui .btn-play { margin: 0 6px; }
+    body.touch-ui #player-stage { transform: translate(-50%, -50%) scale(0.88) !important; }
+    body.touch-ui.show-ui #player-stage {
+        transform: translate(-50%, calc(-50% - 32px)) scale(0.88) !important;
+    }
+    /* Portrait Android: bottom nav bar (reuse #top-bar / .top-trigger) */
+    body.android.touch-ui #top-bar {
+        top: auto !important;
+        bottom: -80px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        justify-content: stretch;
+        gap: 0;
+        padding: 7px max(8px, env(safe-area-inset-left, 0px)) max(7px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px));
+        box-sizing: border-box;
+        background: rgba(10, 10, 10, 0.96);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        border-radius: 0;
+        transition: bottom 0.335s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    }
+    body.android.touch-ui.show-ui:not(.browse-open):not(.queue-open):not(.players-open) #top-bar,
+    body.android.touch-ui.menu-open #top-bar,
+    body.android.touch-ui.nav-menu-open #top-bar,
+    body.android.touch-ui.volume-menu-open #top-bar,
+    body.android.touch-ui.panel-open #top-bar {
+        bottom: 0;
+        top: auto !important;
+    }
+    body.android.touch-ui.browse-open #top-bar,
+    body.android.touch-ui.queue-open #top-bar,
+    body.android.touch-ui.players-open #top-bar,
+    body.android.touch-ui.guest-access-open #top-bar {
+        bottom: -80px;
+        top: auto !important;
+        opacity: 0;
+        pointer-events: none;
+    }
+    body.android.touch-ui .top-trigger {
+        border-radius: 0;
+        width: auto;
+        height: 30px;
+        flex: 1 1 0;
+        max-width: none;
+        background: transparent;
+        border-color: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+    }
+    body.android.touch-ui .top-trigger.focused,
+    body.android.touch-ui .top-trigger.active {
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+        transform: none;
+    }
+    body.android.touch-ui .top-trigger .top-icon { width: 23px; height: 23px; }
+    body.android.touch-ui .top-trigger svg { width: 26px; height: 26px; }
+    body.android.touch-ui #settings-menu,
+    body.android.touch-ui #nav-menu,
+    body.android.touch-ui #volume-menu {
+        top: auto;
+        bottom: auto;
+        max-height: min(48vh, calc(100dvh - env(safe-area-inset-bottom, 0px) - 72px));
+        overflow-y: auto;
+    }
+}
+@media (orientation: landscape) {
+    body.android.touch-ui #settings-menu,
+    body.android.touch-ui #nav-menu,
+    body.android.touch-ui #volume-menu {
+        max-height: min(42vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 56px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    body.android.touch-ui .settings-menu-item { padding: 11px 14px; }
+    body.android.touch-ui .settings-slider-block { padding: 8px 14px 10px; }
+}
+@media (orientation: landscape) {
+    body.touch-ui #controls-container {
+        min-height: 72px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+        align-items: center;
+    }
+    body.touch-ui .cover-wrapper { width: min(52vh, 34vw); height: min(52vh, 34vw); }
+    body.touch-ui h1 { font-size: 1.45rem; }
+    body.touch-ui #title-measure { font-size: 1.45rem; }
+    body.touch-ui h2 { font-size: 1.05rem; }
+    body.touch-ui.show-ui #player-stage {
+        transform: translate(-50%, calc(-50% - 18px)) scale(0.72) !important;
+    }
+    body.touch-ui .panel-list.panel-root-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    body.touch-ui .panel-root-grid .panel-row { padding: 12px 8px; min-height: 84px; }
+    body.touch-ui .panel-root-grid .panel-row-icon { width: 26px; height: 26px; }
+    body.touch-ui .panel-root-grid .panel-row-title { font-size: 0.75rem; }
+    body.touch-ui .panel-list.panel-alpha-grid { grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    body.touch-ui .panel-alpha-grid .panel-row { padding: 10px 4px; min-height: 42px; }
+    body.touch-ui .panel-alpha-grid .panel-row-title { font-size: 1.1rem; }
+    body.touch-ui .panel-alpha-grid .panel-row[data-letter="0-9"] .panel-row-title,
+    body.touch-ui .panel-alpha-grid .panel-row[data-letter="!"] .panel-row-title {
+        font-size: 1.1rem;
+    }
+}
+
+body.touch-ui #volume-menu {
+    min-width: 0; max-width: min(280px, calc(100vw - 24px));
+    border-radius: 12px;
+}
+body.touch-ui .volume-menu-panel { padding: 10px 14px 8px; }
+body.touch-ui .volume-menu-header { margin-bottom: 8px; font-size: 0.92rem; }
+body.touch-ui .volume-menu-value { font-size: 0.82rem; }
+body.touch-ui #volume-slider { height: 8px; }
+body.touch-ui #volume-slider::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -4px; }
+body.touch-ui #volume-close { padding: 11px 14px; font-size: 0.92rem; }
+
+@media (orientation: portrait) {
+    body.android.touch-ui .panel-row-wrap:has(.player-sync-delay-bar) {
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+    body.android.touch-ui .panel-row-wrap:has(.player-sync-delay-bar) > .panel-row-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    body.android.touch-ui .panel-row-wrap:has(.player-sync-delay-bar) > .player-sync-delay-bar {
+        flex: 1 1 100%;
+        width: 100%;
+        order: 10;
+        justify-content: center;
+        align-self: auto;
+        padding: 8px 16px 12px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        background: rgba(0, 0, 0, 0.12);
+    }
+}
+
+body.touch-ui .details-label,
+body.touch-ui .details-value { font-size: 1.05rem; }
+body.touch-ui #viz-modes-menu {
+    min-width: min(240px, calc(100vw - 24px));
+    max-width: min(260px, calc(100vw - 24px));
+}
+body.touch-ui .viz-mode-selector {
+    gap: 4px;
+}
+body.touch-ui .viz-mode-selector-btn {
+    width: 26px;
+    height: 26px;
+}
+body.touch-ui .viz-mode-selector-btn img {
+    width: 14px;
+    height: 14px;
+}

@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Verify release metadata
+        run: |
+          python3 scripts/verify_version.py
+          python3 scripts/verify_webui_js.py
+          python3 scripts/pre_push_check.py
+
+      - name: Sync platform trees
+        run: python3 scripts/sync_public_platforms.py
+
+      - name: Require Android signing secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Release APK signing is not configured."
+            echo "Add GitHub repo secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,"
+            echo "ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD — see docs/RELEASE.md"
+            exit 1
+          fi
+
+      - name: Prepare Android signing keystore
+        working-directory: spinstage-android/android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > spinstage-release.keystore
+          cat > keystore.properties <<EOF
+          storeFile=spinstage-release.keystore
+          storePassword=${KEYSTORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
+      - name: Package webui zip
+        run: python3 scripts/package_release.py --out release-artifacts
+
+      - name: Build Android release APK
+        run: |
+          npm ci
+          npm run build:release
+        working-directory: spinstage-android
+
+      - name: Verify release APK signature
+        run: |
+          APK="spinstage-android/android/app/build/outputs/apk/release/app-release.apk"
+          if command -v apksigner >/dev/null 2>&1; then
+            apksigner verify --verbose "$APK"
+          else
+            jarsigner -verify -verbose -certs "$APK"
+          fi
+
+      - name: Install webOS CLI and build IPK
+        run: |
+          npm install -g @webosose/ares-cli
+          npm run package
+        working-directory: spinstage-webos
+
+      - name: Collect release artifacts
+        run: |
+          VERSION="$(tr -d '\n' < spinstage-webui/VERSION)"
+          IPK="spinstage-webos/com.spinstage_${VERSION}_all.ipk"
+          test -f "$IPK" || { echo "Missing IPK: $IPK"; ls -la spinstage-webos/*.ipk 2>/dev/null; exit 1; }
+          python3 scripts/package_release.py \
+            --out release-artifacts \
+            --apk spinstage-android/dist/spinstage-${VERSION}.apk \
+            --ipk "$IPK"
+          ls -la release-artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+          generate_release_notes: true

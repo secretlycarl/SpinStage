@@ -1,0 +1,10 @@
+{
+  "name": "spinstage-webos",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SpinStage for LG webOS",
+  "scripts": {
+    "inject:defaults": "python scripts/inject_user_settings.py",
+    "package": "npm run inject:defaults && ares-package --no-minify ."
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SpinStage</string>
+    <string name="title_activity_main">SpinStage</string>
+    <string name="package_name">com.spinstage</string>
+    <string name="custom_url_scheme">com.spinstage</string>
+</resources>

@@ -1,0 +1,17 @@
+{
+    "id": "com.spinstage",
+    "version": "1.0.0",
+    "vendor": "Open Source",
+    "type": "web",
+    "main": "index.html",
+    "title": "SpinStage",
+    "icon": "icon.png",
+    "largeIcon": "largeIcon.png",
+    "permissions": [
+        "displayAll"
+    ],
+    "screenSaverProperties": {
+        "preferredType": 2
+    },
+    "disableBackHistoryAPI": true
+}

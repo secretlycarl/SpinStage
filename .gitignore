@@ -1,0 +1,31 @@
+# Secrets / per-user defaults
+**/config/user-settings.json
+.env
+.env.*
+**/local.properties
+
+# Node / Android build
+node_modules/
+.gradle/
+**/build/
+.cxx/
+*.apk
+*.aab
+
+# webOS packages
+*.ipk
+
+# Android release signing (local only)
+**/keystore.properties
+*.keystore
+*.jks
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

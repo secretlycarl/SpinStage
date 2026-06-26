@@ -1,0 +1,12 @@
+{
+  "appId": "com.spinstage",
+  "appName": "SpinStage",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#000000",
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "http"
+  }
+}
