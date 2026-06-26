@@ -193,10 +193,8 @@ def check_webos_runtime_patches() -> list[str]:
 
 def check_android_index_links() -> list[str]:
     errors: list[str] = []
-    for root in (
-        REPO / "spinstage-android" / "www",
-        REPO / "spinstage-android" / "android" / "app" / "src" / "main" / "assets" / "public",
-    ):
+    # assets/public is Capacitor output (gitignored); www is the tracked Android web tree.
+    for root in (REPO / "spinstage-android" / "www",):
         index_path = root / "index.html"
         if not index_path.is_file():
             errors.append(f"Missing {index_path.relative_to(REPO)}")
@@ -214,7 +212,6 @@ def check_platform_trees_synced() -> list[str]:
     errors.extend(check_android_index_links())
     platform_roots = (
         REPO / "spinstage-android" / "www",
-        REPO / "spinstage-android" / "android" / "app" / "src" / "main" / "assets" / "public",
         REPO / "spinstage-webos",
     )
     for rel in iter_webui_runtime_files():

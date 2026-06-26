@@ -34,7 +34,7 @@ jobs:
       - name: Sync drift check
         run: |
           python3 scripts/sync_public_platforms.py
-          git diff --exit-code -- spinstage-webui spinstage-android/www spinstage-android/android/app/src/main/assets/public spinstage-webos
+          git diff --exit-code -- spinstage-webui spinstage-android/www spinstage-webos
 
   android:
     runs-on: ubuntu-latest
