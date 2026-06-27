@@ -4,15 +4,13 @@
   <img src="assets/repo-logo.svg" alt="SpinStage" width="320">
 </p>
 
-Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, and LG webOS.
-
-Setup walkthrough and release media: [GitHub Releases](https://github.com/secretlycarl/SpinStage/releases). Screenshots below.
+Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, and LG webOS. Demo video & screenshots will be added soon.
 
 > **Unofficial client.** SpinStage is a third-party homelab app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
 
 > **AI-built code.** Developed using Cursor (various models). I made a lot of icons, designed the UI, came up with visualizer concepts, and have spent weeks ideating and testing, but I'm a designer not a real developer. Thankfully the security implications of the app are pretty limited; the only third-party integration is for the Listen Party QR code that MA already uses. See the [Security](#security) section for more info. You are responsible for securing your traffic if using the app remotely.
 
-I've shared it with one person so far and here's what they had to say (thankfully) - 
+I've shared it with one person so far and here's what they had to say - 
 
 "Wow ... I just installed and tried it out, expecting it to be a bit rough around the edges and needing some work. However it is fantastic! great job. Very impressive."
 
@@ -36,8 +34,6 @@ How to cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 **Alternatively:** clone this repo and [build from source](#build-from-source) (below). One repo, all three platforms; releases are just pre-built copies so you don't need Node, Gradle, ares-cli, or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) unless you want them.
 
----
-
 ## How it works
 
 SpinStage is just the **client**. Music lives in Music Assistant — you need MA running somewhere reachable, Sendspin enabled, an MA login, and to configure the **player** in MA (may need to uncheck the "hide player" option).
@@ -51,8 +47,6 @@ SpinStage is just the **client**. Music lives in Music Assistant — you need MA
 Real source code is **`spinstage-webui/`**. Android and webOS folders are copies synced from that.
 
 **Tested with:** Music Assistant 2.9.x + Sendspin. Other MA versions may work; file an issue with your MA version if something breaks.
-
----
 
 ## Features
 
@@ -72,15 +66,9 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 It has ways to interact with most MA browsing / playback / player functions. More to come as requested, I only use so many features.
 
----
-
 ## Screenshots
 
-UI captures live in [`docs/screenshots/`](docs/screenshots/). When present, they appear here:
-
-| Now playing | Browse |
-|:---:|:---:|
-| ![Now playing](docs/screenshots/now-playing.png) | ![Browse](docs/screenshots/browse.png) |
+Will upload and add them soon.
 
 See the [screenshots folder](docs/screenshots/) for more.
 
@@ -94,8 +82,6 @@ See the [screenshots folder](docs/screenshots/) for more.
 4. Client can reach MA:
    - **LAN:** ports **8927** (Sendspin) and **8095** (MA)
    - **Remote:** HTTPS + `/sendspin` — see [Remote access](#remote-access)
-
----
 
 ## Quick start (from a Release)
 
@@ -133,8 +119,6 @@ ares-install --device my-tv com.spinstage_*_all.ipk
 Pair the TV (same Developer Mode setup), then drag/drop the `.ipk` onto Dev Manager.
 
 → [spinstage-webos/INSTALL.md](spinstage-webos/INSTALL.md)
-
----
 
 ## Build from source
 
@@ -183,8 +167,6 @@ Output filename matches `appinfo.json` / `spinstage-webui/VERSION` (e.g. `com.sp
 Optional: pre-fill `config/user-settings.json` before packaging to skip setup on the TV.
 
 → [spinstage-webos/INSTALL.md](spinstage-webos/INSTALL.md)
-
----
 
 ## Skip setup (optional)
 
@@ -265,8 +247,6 @@ LAN: open 8927 + 8095 on the MA box. Remote via tunnel: router doesn't need port
 2. Same hostname in SpinStage setup
 3. Settings → Show Connection — should show `wss://…/sendspin`
 
----
-
 ## Security
 
 SpinStage is a homelab client for [Music Assistant](https://music-assistant.io/) + [Sendspin](https://github.com/music-assistant/sendspin). I use it on my own network; it is not meant to be a public-facing service on its own.
@@ -316,13 +296,9 @@ Only turn on in MA if you trust everyone on the network.
 
 The in-app guest QR is rendered via [quickchart.io](https://quickchart.io/) — the full party/join URL is sent to that third-party service to generate the image. Do not enable guest mode if that URL must stay on your LAN only. See also [SMOKE.md](SMOKE.md) (guest checklist).
 
----
-
 ### Found something?
 
 Open a GitHub issue (minimal detail in public) or use private reporting if you've got it. **Don't paste** tokens, passwords, or full `user-settings.json` in the open.
-
----
 
 ## Contributing
 
@@ -385,8 +361,6 @@ Run `python3 scripts/pre_push_check.py` before push.
 Open an issue: platform, SpinStage version, MA version if relevant, steps to repro.
 
 Scripts live in **`scripts/`** (sync, pre-push check, user-settings helpers). Optional JS parse check: `python3 scripts/verify_webui_js.py` (needs Node 18+).
-
----
 
 ## Credits & related projects
 
