@@ -20,7 +20,7 @@ Overall I'd say this initial release is about 75% where i want the project to be
 
 ## Get SpinStage
 
-**Easiest:** [GitHub Releases](https://github.com/secretlycarl/SpinStage/releases) — pick the file for your platform:
+**Easiest:** [GitHub Releases](https://github.com/secretlycarl/SpinStage/releases) – pick the file for your platform:
 
 | Asset | Platform | What to do |
 |-------|----------|------------|
@@ -28,7 +28,7 @@ Overall I'd say this initial release is about 75% where i want the project to be
 | `spinstage-*.apk` | Android | Sideload the APK (`adb install -r …` or copy to device and open) |
 | `com.spinstage_*_all.ipk` | LG webOS TV | Install with [`ares-install`](https://webostv.developer.lge.com/develop/tools/cli-introduction) or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) (Developer Mode on the TV either way) |
 
-Each release matches a tagged version (see `spinstage-webui/VERSION` in the repo). **No credentials are bundled** in release downloads — use the in-app Connect screen on first launch.
+Each release matches a tagged version (see `spinstage-webui/VERSION` in the repo). **No credentials are bundled** in release downloads – use the in-app Connect screen on first launch.
 
 How to cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
@@ -36,7 +36,7 @@ How to cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 
 ## How it works
 
-SpinStage is just the **client**. Music lives in Music Assistant — you need MA running somewhere reachable, Sendspin enabled, an MA login, and to configure the **player** in MA (may need to uncheck the "hide player" option).
+SpinStage is just the **client**. Music lives in Music Assistant – you need MA running somewhere reachable, Sendspin enabled, an MA login, and to configure the **player** in MA (may need to uncheck the "hide player" option).
 
 | You already have | SpinStage gives you |
 |------------------|---------------------|
@@ -50,13 +50,13 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 ## Features
 
-**Player UI** — cover art, accent colors from the track, blurred bg crossfade, optional audio visualizer, controls that hide until you need them.
+**Player UI** – cover art, accent colors from the track, blurred bg crossfade, optional audio visualizer, controls that hide until you need them.
 
-**Browse & search** — MA library (artists, albums, playlists, podcasts, radio, etc.). Search with type filters. Pick which providers to search. **Go to** from now playing jumps straight to artist/album/etc.
+**Browse & search** – MA library (artists, albums, playlists, podcasts, radio, etc.). Search with type filters. Pick which providers to search. **Go to** from now playing jumps straight to artist/album/etc.
 
-**Queue** — reorder, row menus, autoplay, save queue as MA playlist.
+**Queue** – reorder, row menus, autoplay, save queue as MA playlist.
 
-**Device Sync** — see MA players, group sync, stereo pair + offset tuning, per-player volume in a group.
+**Device Sync** – see MA players, group sync, stereo pair + offset tuning, per-player volume in a group.
 
 **Separation of personal/public Spotify content in search** - Not yet a feature on MA
 
@@ -81,7 +81,7 @@ See the [screenshots folder](docs/screenshots/) for more.
 3. MA username + password (Settings → Profile)
 4. Client can reach MA:
    - **LAN:** ports **8927** (Sendspin) and **8095** (MA)
-   - **Remote:** HTTPS + `/sendspin` — see [Remote access](#remote-access)
+   - **Remote:** HTTPS + `/sendspin` – see [Remote access](#remote-access)
 
 ## Quick start (from a Release)
 
@@ -93,7 +93,7 @@ Unzip `spinstage-webui-*.zip`. You need Python 3.10+.
 
 ```bash
 cd spinstage-webui
-./run.sh --open          # Linux/macOS — run.bat / run.ps1 on Windows
+./run.sh --open          # Linux/macOS – run.bat / run.ps1 on Windows
 ```
 
 Connect once in the app (server, player name, MA username/password). See [spinstage-webui/INSTALL.md](spinstage-webui/INSTALL.md).
@@ -108,13 +108,13 @@ Install the release `.apk` on your device. Enable install from unknown sources i
 
 TV must be in [Developer Mode](https://webos.developer.lge.com/develop/getting-started). Install the `.ipk` from the release (filename matches version, e.g. `com.spinstage_0.4.0_all.ipk`):
 
-**Option A — CLI ([ares-cli](https://webostv.developer.lge.com/develop/tools/cli-introduction))**
+**Option A – CLI ([ares-cli](https://webostv.developer.lge.com/develop/tools/cli-introduction))**
 
 ```bash
 ares-install --device my-tv com.spinstage_*_all.ipk
 ```
 
-**Option B — GUI ([webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop))**
+**Option B – GUI ([webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop))**
 
 Pair the TV (same Developer Mode setup), then drag/drop the `.ipk` onto Dev Manager.
 
@@ -204,13 +204,13 @@ SpinStage on a phone/TV/browser needs **two** things from your MA host:
 | Sendspin | port **8927** | `/sendspin` (WebSocket) |
 | Music Assistant | port **8095** | `/` (API, art, browse) |
 
-**LAN:** enter IP in setup (e.g. `192.168.1.100`) — app uses `ws://IP:8927/sendspin` and `http://IP:8095`.
+**LAN:** enter IP in setup (e.g. `192.168.1.100`) – app uses `ws://IP:8927/sendspin` and `http://IP:8095`.
 
-**HTTPS:** enter hostname only (e.g. `music.example.com`) — app uses `wss://host/sendspin` and `https://host`.
+**HTTPS:** enter hostname only (e.g. `music.example.com`) – app uses `wss://host/sendspin` and `https://host`.
 
 ### Cloudflare tunnel example
 
-One hostname, two rules — **put `/sendspin*` first**:
+One hostname, two rules – **put `/sendspin*` first**:
 
 ```yaml
 - hostname: music.example.com
@@ -231,7 +231,7 @@ Or split Sendspin to its own subdomain if you prefer:
   service: http://192.168.1.100:8095
 ```
 
-(If you split subdomains you need to align MA/Sendspin base URLs — same-host `/sendspin` is the easy path.)
+(If you split subdomains you need to align MA/Sendspin base URLs – same-host `/sendspin` is the easy path.)
 
 ### MA setting
 
@@ -245,13 +245,13 @@ LAN: open 8927 + 8095 on the MA box. Remote via tunnel: router doesn't need port
 
 1. Browser on the client device: `https://music.example.com` loads MA
 2. Same hostname in SpinStage setup
-3. Settings → Show Connection — should show `wss://…/sendspin`
+3. Settings → Show Connection – should show `wss://…/sendspin`
 
 ## Security
 
 SpinStage is a homelab client for [Music Assistant](https://music-assistant.io/) + [Sendspin](https://github.com/music-assistant/sendspin). I use it on my own network; it is not meant to be a public-facing service on its own.
 
-See the [disclaimer at the top](#spinstage) — SpinStage is an unofficial third-party client, not affiliated with Music Assistant.
+See the [disclaimer at the top](#spinstage) – SpinStage is an unofficial third-party client, not affiliated with Music Assistant.
 
 ### Credential storage (read this before Connect)
 
@@ -261,14 +261,14 @@ After you sign in, SpinStage saves your setup so restarts stay signed in. Here's
 |------|-------------------|---------|
 | **MA username + password** | `localStorage` key `spinstage_user_settings` | Same (`localStorage`) |
 | **MA API token** (after login) | `sessionStorage` | Android Keystore via SecureStorage plugin when available |
-| **Token fallback** | — | If SecureStorage fails or is unavailable, token may also be written to `localStorage` (`ma_api_token_persist`) |
-| **Disk file** (browser dev server only) | `config/user-settings.json` if you use `server.py` | — |
+| **Token fallback** | – | If SecureStorage fails or is unavailable, token may also be written to `localStorage` (`ma_api_token_persist`) |
+| **Disk file** (browser dev server only) | `config/user-settings.json` if you use `server.py` | – |
 
 \* **webOS** uses the same WebView storage model as the browser (`localStorage` / `sessionStorage`), not a separate TV keychain.
 
 **Passwords are stored in plaintext in browser localStorage** after Connect on every platform. Treat the device like it holds your MA password. Clear app data / localStorage if you uninstall or share the device.
 
-Optional `config/user-settings.json` (gitignored) is also plaintext on disk. Build-time injection into APK/IPK embeds credentials in the package — anyone can unzip and read them.
+Optional `config/user-settings.json` (gitignored) is also plaintext on disk. Build-time injection into APK/IPK embeds credentials in the package – anyone can unzip and read them.
 
 ### Known tradeoffs (on purpose for now)
 
@@ -280,9 +280,9 @@ Might tighten later with a network security config for private ranges only.
 
 #### Browser dev server (`spinstage-webui/server.py`)
 
-- Listens on `0.0.0.0` by default — **any device on your LAN can load the UI**
-- Serves `config/user-settings.json` off disk if it exists — **no auth on GET**
-- `POST /api/user-settings` writes creds — **127.0.0.1 only**
+- Listens on `0.0.0.0` by default – **any device on your LAN can load the UI**
+- Serves `config/user-settings.json` off disk if it exists – **no auth on GET**
+- `POST /api/user-settings` writes creds – **127.0.0.1 only**
 
 Don't expose port 9728 to the internet. Don't run the dev server on a machine you wouldn't trust with your MA password. Don't commit `user-settings.json`.
 
@@ -294,7 +294,7 @@ If you inject `user-settings.json` into a build, username/password are in the pa
 
 Only turn on in MA if you trust everyone on the network.
 
-The in-app guest QR is rendered via [quickchart.io](https://quickchart.io/) — the full party/join URL is sent to that third-party service to generate the image. Do not enable guest mode if that URL must stay on your LAN only. See also [SMOKE.md](SMOKE.md) (guest checklist).
+The in-app guest QR is rendered via [quickchart.io](https://quickchart.io/) – the full party/join URL is sent to that third-party service to generate the image. Do not enable guest mode if that URL must stay on your LAN only. See also [SMOKE.md](SMOKE.md) (guest checklist).
 
 ### Found something?
 
@@ -318,10 +318,10 @@ Commit the webui change **and** the synced trees together.
 
 1. Edit `spinstage-webui/` (`app/`, `styles/`, `index.html`, …)
 2. `python3 scripts/sync_public_platforms.py`
-3. Quick test — browser at minimum; TV/phone if you touched nav/UI
-4. Bump version if you're releasing — set `spinstage-webui/VERSION`, then run sync (updates Android `build.gradle`, package.json files, webOS `appinfo.json`; `python3 scripts/verify_version.py` checks consistency)
+3. Quick test – browser at minimum; TV/phone if you touched nav/UI
+4. Bump version if you're releasing – set `spinstage-webui/VERSION`, then run sync (updates Android `build.gradle`, package.json files, webOS `appinfo.json`; `python3 scripts/verify_version.py` checks consistency)
 5. `python3 scripts/pre_push_check.py`
-6. Commit (`fix: …`, `feat: …`, whatever — just say what changed)
+6. Commit (`fix: …`, `feat: …`, whatever – just say what changed)
 
 **Version bump (releases):**
 
@@ -334,7 +334,7 @@ Commit the webui change **and** the synced trees together.
 
 ### Don't commit secrets
 
-Already gitignored — keep it that way:
+Already gitignored – keep it that way:
 
 - `**/config/user-settings.json`
 - `android/local.properties`
@@ -344,7 +344,7 @@ Run `python3 scripts/pre_push_check.py` before push.
 
 ### Touch carefully
 
-- **`sendspin-lib.js`** — upstream Sendspin client; mention in issue/PR if you patch it
+- **`sendspin-lib.js`** – upstream Sendspin client; mention in issue/PR if you patch it
 - **Android-only CSS:** `scripts/sync-assets/platform-android.css`
 - **webOS TV CSS:** `spinstage-webui/styles/platform-webos.css`
 
@@ -354,7 +354,7 @@ Run `python3 scripts/pre_push_check.py` before push.
 - [ ] Ran sync; nothing important left unstaged
 - [ ] Version bumped (if release)
 - [ ] `pre_push_check.py` clean
-- [ ] Smoked browser (and TV/phone if relevant) — see [SMOKE.md](SMOKE.md)
+- [ ] Smoked browser (and TV/phone if relevant) – see [SMOKE.md](SMOKE.md)
 
 ### Bugs
 
@@ -368,7 +368,7 @@ SpinStage evolved from the webOS-focused [sendspin-cinema-webos](https://github.
 
 Other unofficial Music Assistant clients worth knowing about:
 
-- [Ensemble](https://github.com/CollotsSpot/Ensemble) — Android client for Music Assistant, pairs well with SpinStage as a remote control.
+- [Ensemble](https://github.com/CollotsSpot/Ensemble) – Android client for Music Assistant, pairs well with SpinStage as a remote control.
 
 ## License & third-party
 
@@ -380,10 +380,10 @@ Not all of this repo is from scratch:
 |------|--------|-----------------|
 | Sendspin client | `spinstage-webui/sendspin-lib.js` | [MIT](https://github.com/music-assistant/sendspin/blob/main/LICENSE) (Music Assistant / Sendspin project) |
 | Material Color Utilities (album art accents) | `spinstage-webui/app/vendor/material-color-utilities/` | Apache-2.0 |
-| Lucide icons | `spinstage-webui/icons/*.svg` (most UI chrome) | [MIT](https://github.com/lucide-icons/lucide/blob/main/LICENSE) — see `icons/ICON_SOURCES.txt` |
+| Lucide icons | `spinstage-webui/icons/*.svg` (most UI chrome) | [MIT](https://github.com/lucide-icons/lucide/blob/main/LICENSE) – see `icons/ICON_SOURCES.txt` |
 | Tabler icons | `spinstage-webui/icons/*.svg` (where noted) | [MIT](https://github.com/tabler/tabler-icons/blob/main/LICENSE) |
-| MA genre icons | `spinstage-webui/icons/genres/` | Shipped with [Music Assistant](https://github.com/music-assistant/server); redistributed here for browse UI parity only — not SpinStage-owned artwork |
-| Provider logos | `spinstage-webui/icons/providers/` | From MA Docker image / provider assets; third-party trademarks — display only, no ownership claim |
+| MA genre icons | `spinstage-webui/icons/genres/` | Shipped with [Music Assistant](https://github.com/music-assistant/server); redistributed here for browse UI parity only – not SpinStage-owned artwork |
+| Provider logos | `spinstage-webui/icons/providers/` | From MA Docker image / provider assets; third-party trademarks – display only, no ownership claim |
 | Capacitor (Android shell) | `spinstage-android/package.json` | MIT |
 | ares-cli (webOS packaging) | dev dep in `spinstage-webos/package.json` | Apache-2.0 |
 
