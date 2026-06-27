@@ -4,7 +4,7 @@
   <img src="assets/repo-logo.svg" alt="SpinStage" width="320">
 </p>
 
-Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, and LG webOS. Demo video & screenshots will be added soon.
+Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, and LG webOS. Demo video will be added soon, screenshots below.
 
 > **Unofficial client.** SpinStage is a third-party homelab app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
 
@@ -68,10 +68,8 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
 
 ## Screenshots
 
-Will upload and add them soon.
-
-See the [screenshots folder](docs/screenshots/) for more.
-
+![Screenshots1](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png)
+![Screenshots2](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png)
 ---
 
 ## Before you start (all platforms)
