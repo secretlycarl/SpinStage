@@ -1,4 +1,3 @@
-# SpinStage
 
 <p align="center">
   <img src="assets/repo-logo.svg" alt="SpinStage" width="320">
@@ -37,12 +36,6 @@ How to cut releases: [docs/RELEASE.md](docs/RELEASE.md).
 ## How it works
 
 SpinStage is just the **client**. Music lives in Music Assistant – you need MA running somewhere reachable, Sendspin enabled, an MA login, and to configure the **player** in MA (may need to uncheck the "hide player" option).
-
-| You already have | SpinStage gives you |
-|------------------|---------------------|
-| MA + Sendspin | Full-screen player |
-| MA user account | Browse, search, queue |
-| A player per device | Multi-room sync, volume, transport |
 
 Real source code is **`spinstage-webui/`**. Android and webOS folders are copies synced from that.
 
