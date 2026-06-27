@@ -29,8 +29,6 @@ Overall I'd say this initial release is about 75% where i want the project to be
 
 Each release matches a tagged version (see `spinstage-webui/VERSION` in the repo). **No credentials are bundled** in release downloads – use the in-app Connect screen on first launch.
 
-How to cut releases: [docs/RELEASE.md](docs/RELEASE.md).
-
 **Alternatively:** clone this repo and [build from source](#build-from-source) (below). One repo, all three platforms; releases are just pre-built copies so you don't need Node, Gradle, ares-cli, or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) unless you want them.
 
 ## How it works
