@@ -58,11 +58,11 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 **Device Sync** – see MA players, group sync, stereo pair + offset tuning, per-player volume in a group.
 
-**Separation of personal/public Spotify content in search** - Not yet a feature on MA
+**Separation of personal/public Spotify content in search** – Not yet a feature on MA, but you can do it here
 
-**10+ visualizers** - Single, Double, Shuffle, and Cycle modes
+**10+ visualizers** – Single, Double, Shuffle, and Cycle modes
 
-**EQ Preset picker** - Using EQ profiles from the server
+**EQ Preset picker** – Using EQ profiles from the server
 
 It has ways to interact with most MA browsing / playback / player functions. More to come as requested, I only use so many features.
 
