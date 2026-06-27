@@ -68,7 +68,7 @@ Tag must match `VERSION` (with `v` prefix): `VERSION=0.9.9` → tag `v0.9.9`.
 
 ## Manual release (without Actions)
 
-From `Public/`:
+From the repository root:
 
 ```bash
 VERSION="$(tr -d '\n' < spinstage-webui/VERSION)"

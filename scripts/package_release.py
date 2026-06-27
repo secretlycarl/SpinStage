@@ -4,7 +4,7 @@
 Creates a versioned webui zip and optionally copies/renames built APK and IPK
 into a single output folder (outside the git tree by default).
 
-Usage (from Public/):
+Usage (from repository root):
 
   python3 scripts/package_release.py
 
