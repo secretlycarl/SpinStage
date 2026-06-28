@@ -45,7 +45,7 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 **Browse & search** – MA library (artists, albums, playlists, podcasts, radio, etc.). Search with type filters. Pick which providers to search. **Go to** from now playing jumps straight to artist/album/etc.
 
-**Queue** – reorder, row menus, autoplay, save queue as MA playlist.
+**Lyrics** – Synced lyrics support, and non-synced lyrics slowly auto scroll, which the user can scroll to adjust the "anchor"
 
 **Device Sync** – see MA players, group sync, stereo pair + offset tuning, per-player volume in a group.
 
@@ -54,6 +54,8 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 **10+ visualizers** – Single, Double, Shuffle, and Cycle modes
 
 **EQ Preset picker** – Using EQ profiles from the server
+
+**Queue** – reorder, autoplay, save queue as MA playlist.
 
 It has ways to interact with most MA browsing / playback / player functions. More to come as requested, I only use so many features.
 
