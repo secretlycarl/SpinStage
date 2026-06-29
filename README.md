@@ -97,7 +97,7 @@ Install the release `.apk` on your device. Enable install from unknown sources i
 
 ### webOS TV
 
-TV must be in [Developer Mode](https://webos.developer.lge.com/develop/getting-started). Install the `.ipk` from the release (filename matches version, e.g. `com.spinstage_1.0.0_all.ipk`):
+TV must be in [Developer Mode]([https://webos.developer.lge.com/develop/getting-started](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app)). Install the `.ipk` from the release (filename matches version, e.g. `com.spinstage_1.0.0_all.ipk`):
 
 **Option A – CLI ([ares-cli](https://webostv.developer.lge.com/develop/tools/cli-introduction))**
 
