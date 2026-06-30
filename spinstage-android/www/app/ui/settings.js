@@ -6,6 +6,7 @@ import { state } from '../state.js';
 import {
     SHOW_CONNECTION_KEY,
     DISABLE_VISUALIZER_KEY,
+    DISABLE_VIZ_BLUR_KEY,
     VIZ_BAR_COUNT_KEY,
     EQ_PRESET_KEY,
     BASS_MODE_KEY,
@@ -23,6 +24,7 @@ import {
     settingsBtn,
     showConnectionCheck,
     disableVisualizerCheck,
+    disableVizBlurCheck,
     fullscreenCheck,
     vizWrap,
     vizBarCountRow,
@@ -33,6 +35,7 @@ import {
     vizFpsSlider,
     vizFpsValueEl,
     menuDisableVisualizerBtn,
+    menuDisableVizBlurBtn,
     menuGuestAccessBtn,
     menuArtDisplayBtn,
     menuShowLyricsBtn,
@@ -71,6 +74,8 @@ import {
     normalizeVizBarCount,
     getVizBarCount,
     getDisableVisualizer,
+    getDisableVizBlur,
+    applyVizBlurSetting,
     getVisualizer,
     tryAttachVisualizer,
     getVizMode,
@@ -93,10 +98,13 @@ import { uiH } from './handlers.js';
 const settingsMenuItems = [
     menuGuestAccessBtn, menuArtDisplayBtn, menuShowLyricsBtn, menuFullscreenBtn,
     menuDisableVisualizerBtn, menuVizModesBtn,
-    menuEqPresetsBtn, menuSwitchInfoBtn, menuShowConnectionBtn, menuSetupBtn, menuCloseBtn,
+    menuDisableVizBlurBtn, menuEqPresetsBtn, menuSwitchInfoBtn, menuShowConnectionBtn, menuSetupBtn, menuCloseBtn,
 ];
 
+const FS_ESC_EXIT_HOLD_MS = 2000;
 let webUiFullscreenPinned = false;
+let fsEscDownAt = 0;
+let fullscreenKeyboardLocked = false;
 
 function getShowConnection() {
     return localStorage.getItem(SHOW_CONNECTION_KEY) === '1';
@@ -124,6 +132,7 @@ function syncVizResolutionRow() {
     if (menuVizModesBtn) menuVizModesBtn.hidden = disabled;
     if (vizBarCountRow) vizBarCountRow.hidden = !usesResolution;
     if (vizFpsRow) vizFpsRow.hidden = disabled;
+    if (menuDisableVizBlurBtn) menuDisableVizBlurBtn.hidden = disabled;
     if (vizResolutionLabelEl) {
         vizResolutionLabelEl.textContent = getVizResolutionLabel();
     }
@@ -134,6 +143,7 @@ function syncVizResolutionRow() {
 function syncSettingsMenuChecks() {
     showConnectionCheck.classList.toggle('on', getShowConnection());
     disableVisualizerCheck.classList.toggle('on', getDisableVisualizer());
+    disableVizBlurCheck?.classList.toggle('on', getDisableVizBlur());
     if (fullscreenCheck) fullscreenCheck.classList.toggle('on', isFullscreen());
     syncVizResolutionRow();
     const barCount = getVizBarCount();
@@ -245,10 +255,12 @@ function getSettingsFocusTargets() {
     const targets = [];
     for (const el of settingsMenuItems) {
         if (!el || el.hidden) continue;
+        if (el === menuDisableVizBlurBtn) continue;
         targets.push(el);
         if (el === menuVizModesBtn && !getDisableVisualizer()) {
             if (vizBarCountRow && !vizBarCountRow.hidden) targets.push(vizBarCountRow);
             if (vizFpsRow && !vizFpsRow.hidden) targets.push(vizFpsRow);
+            if (menuDisableVizBlurBtn && !menuDisableVizBlurBtn.hidden) targets.push(menuDisableVizBlurBtn);
         }
     }
     return targets;
@@ -276,6 +288,89 @@ function isFullscreen() {
 
 function clearWebUiFullscreenPinned() {
     webUiFullscreenPinned = false;
+    fsEscDownAt = 0;
+    releaseFullscreenKeyboardLock();
+}
+
+
+
+function supportsFullscreenKeyboardLock() {
+    return isBrowserUi() && typeof navigator?.keyboard?.lock === 'function';
+}
+
+
+
+async function acquireFullscreenKeyboardLock() {
+    if (!supportsFullscreenKeyboardLock() || !document.fullscreenElement) {
+        fullscreenKeyboardLocked = false;
+        return false;
+    }
+    try {
+        await navigator.keyboard.lock(['Escape']);
+        fullscreenKeyboardLocked = true;
+        return true;
+    } catch (err) {
+        console.warn('fullscreen keyboard lock failed:', err);
+        fullscreenKeyboardLocked = false;
+        return false;
+    }
+}
+
+
+
+function releaseFullscreenKeyboardLock() {
+    fullscreenKeyboardLocked = false;
+    try {
+        navigator.keyboard?.unlock?.();
+    } catch (err) {
+        console.warn('fullscreen keyboard unlock failed:', err);
+    }
+}
+
+
+
+function isPinnedBrowserFullscreen() {
+    return isBrowserUi() && webUiFullscreenPinned && !!document.fullscreenElement;
+}
+
+
+
+function consumePinnedFullscreenEscKeyDown(e) {
+    if (!isPinnedBrowserFullscreen() || e.key !== 'Escape') return false;
+    fsEscDownAt = Date.now();
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    return true;
+}
+
+
+
+function consumePinnedFullscreenEscKeyUp(e) {
+    if (!isPinnedBrowserFullscreen() || e.key !== 'Escape') return false;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    if (fullscreenKeyboardLocked) {
+        fsEscDownAt = 0;
+        return true;
+    }
+    const held = fsEscDownAt ? Date.now() - fsEscDownAt : 0;
+    fsEscDownAt = 0;
+    if (held >= FS_ESC_EXIT_HOLD_MS) {
+        void setFullscreen(false);
+    }
+    return true;
+}
+
+
+
+async function syncPinnedFullscreenKeyboardLock() {
+    if (isPinnedBrowserFullscreen()) {
+        await acquireFullscreenKeyboardLock();
+    } else {
+        releaseFullscreenKeyboardLock();
+    }
 }
 
 
@@ -286,12 +381,15 @@ async function setFullscreen(enabled) {
     try {
         if (enabled && !document.fullscreenElement) {
             await document.documentElement.requestFullscreen();
+            await syncPinnedFullscreenKeyboardLock();
         } else if (!enabled && document.fullscreenElement) {
+            releaseFullscreenKeyboardLock();
             await document.exitFullscreen();
         }
     } catch (err) {
         console.warn('fullscreen failed:', err);
         if (enabled) webUiFullscreenPinned = false;
+        releaseFullscreenKeyboardLock();
     } finally {
         syncSettingsMenuChecks();
     }
@@ -803,6 +901,9 @@ function selectArtDisplayAtIndex(index) {
 function applyArtDisplayMode(mode) {
     setArtDisplayMode(mode);
     screenKeeper.setEnabled(shouldKeepScreenAwake());
+    if (!mainBody.classList.contains('show-ui')) {
+        uiH('snapPlayerStageForIdleLayout');
+    }
     uiH('updateFloatState');
 }
 
@@ -874,6 +975,14 @@ function setDisableVisualizer(enabled) {
     syncSettingsMenuChecks();
     applyVisualizerVisibility();
     if (!enabled) void tryAttachVisualizer();
+}
+
+
+
+function setDisableVizBlur(enabled) {
+    localStorage.setItem(DISABLE_VIZ_BLUR_KEY, enabled ? '1' : '0');
+    disableVizBlurCheck?.classList.toggle('on', enabled);
+    applyVizBlurSetting();
 }
 
 
@@ -1116,6 +1225,7 @@ export {
     getShowLyricsEnabled,
     setShowLyricsEnabled,
     setDisableVisualizer,
+    setDisableVizBlur,
     applyVisualizerVisibility,
     getKeepAwake,
     setKeepAwake,
@@ -1138,6 +1248,11 @@ export {
     setFullscreen,
     bindWebUiCursorIdle,
     clearWebUiFullscreenPinned,
+    isPinnedBrowserFullscreen,
+    consumePinnedFullscreenEscKeyDown,
+    consumePinnedFullscreenEscKeyUp,
+    syncPinnedFullscreenKeyboardLock,
+    releaseFullscreenKeyboardLock,
     setCursorHidden,
     toggleRadioSwitchInfo,
     moveEqPresetsFocus,

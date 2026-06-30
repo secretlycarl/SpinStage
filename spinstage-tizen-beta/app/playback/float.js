@@ -84,11 +84,12 @@ export class DvdFloater {
     }
 
     stop(snap = true) {
+        const wasRunning = this.running;
         this.running = false;
         if (this.raf) cancelAnimationFrame(this.raf);
         this.raf = null;
         mainBody.classList.remove('dvd-float');
-        if (snap) {
+        if (snap && wasRunning) {
             this.el.style.left = '50%';
             this.el.style.top = '50%';
             this.el.style.transform = 'translate(-50%, -50%)';

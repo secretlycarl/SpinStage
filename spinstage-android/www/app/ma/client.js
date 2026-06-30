@@ -275,18 +275,22 @@ export const maClient =
                 h('applyNowPlayingFromMaItem', queue.current_item, { force: true, skipVisuals: true });
                 h('requestNowPlayingVisuals', 'bootstrap', { force: true, snapAccent: true });
             }
-            h('ensureLyricsBootstrapped');
+            if (!h('isTvLazyLibraryBootstrap')) {
+                h('ensureLyricsBootstrapped');
+            }
         }
         if (expectedConnId != null && expectedConnId !== this.connectionId) return;
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
         this.bootstrapped = true;
         h('onMaConnectionRestored');
         h('invalidateProviderCaches');
-        void h('ensureMusicProvidersCached').then(() => {
-            h('syncQueueActionChips', this.activeQueue);
-        });
+        if (!h('isTvLazyLibraryBootstrap')) {
+            void h('ensureMusicProvidersCached').then(() => {
+                h('syncQueueActionChips', this.activeQueue);
+            });
+            void h('syncNavMenuState');
+        }
         void h('refreshPlayerVolume').then(() => h('applyDefaultPlayerVolume'));
-        void h('syncNavMenuState');
         void h('readPlayerPlaybackOffsets', this.playerId).then(({ staticMs, trimMs }) => {
             h('applyLocalPlaybackOffsets', staticMs, trimMs);
         });

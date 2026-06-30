@@ -313,6 +313,26 @@ function refreshTitleLayout() {
 }
 
 
+
+function applyShowUiEnterTypography() {
+    applyTitleBaseFont();
+    applyArtistBaseFont();
+    syncAlbumLineVisibility();
+    const info = document.querySelector('.info');
+    if (info) {
+        info.style.removeProperty('width');
+        info.style.removeProperty('max-width');
+        info.style.setProperty('--np-text-max-w', `${getTitleEffectiveMaxWidth()}px`);
+    }
+}
+
+
+
+function settleShowUiTitleMarquee() {
+    refreshNpMarqueeLayout();
+}
+
+
 function scheduleTitleLayoutRelayout() {
     if (!mainBody.classList.contains('show-ui')) return;
     refreshTitleLayout();
@@ -1257,6 +1277,7 @@ function onMaQueueCurrentItemChanged(prevId, nextId) {
         void applyNowPlayingFromMaItem(item, { force: true, skipVisuals: true });
     }
     requestNowPlayingVisuals('queue-change', { force: true });
+    npH('collapseUiForDefaultArtIfIdle');
     _lastPrefetchCheckMs = 0;
     void maybePrefetchNextTrack();
 }
@@ -2479,6 +2500,8 @@ function finishBackgroundBake(img, url, bakeKey, bakeGen, opts = {}) {
 
 export {
     getTitleBaseSizeRem,
+    applyShowUiEnterTypography,
+    settleShowUiTitleMarquee,
     refreshTitleLayout,
     scheduleTitleLayoutRelayout,
     setSongTitle,

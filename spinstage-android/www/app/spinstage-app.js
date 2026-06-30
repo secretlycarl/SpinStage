@@ -100,6 +100,7 @@ import {
   menuArtDisplayBtn,
   menuShowLyricsBtn,
   menuDisableVisualizerBtn,
+  menuDisableVizBlurBtn,
   menuEqPresetsBtn,
   menuSwitchInfoBtn,
   menuVizModesBtn,
@@ -206,6 +207,10 @@ import {
   GROUP_DISSOLVE_MAX_ATTEMPTS,
   GROUP_DISSOLVE_STEP_MS,
   SYNC_JOIN_RECOVERY_DELAY_MS,
+  TIZEN_SYNC_JOIN_RECOVERY_DELAY_MS,
+  TIZEN_SYNC_JOIN_RECOVERY_DEBOUNCE_MS,
+  TIZEN_STREAM_START_GROUP_RECOVERY_DELAY_MS,
+  TIZEN_SENDSPIN_BUFFER_CAPACITY,
   ANDROID_SYNC_JOIN_RECOVERY_DELAY_MS,
   ANDROID_STREAM_START_GROUP_RECOVERY_DELAY_MS,
   PLAYBACK_BUFFER_MIN_AHEAD_SEC,
@@ -332,6 +337,8 @@ import {
   normalizeVizBarCount,
   getVizBarCount,
   getDisableVisualizer,
+  getDisableVizBlur,
+  applyVizBlurSetting,
   shuffleVizModeOnTrackChange,
   vizModeOnTrackChange,
 } from './playback/visualizer.js';
@@ -341,6 +348,8 @@ import {
 } from './playback/playlist-playback.js';
 import {
   refreshTitleLayout,
+  applyShowUiEnterTypography,
+  settleShowUiTitleMarquee,
   scheduleTitleLayoutRelayout,
   setSongTitle,
   setArtistLine,
@@ -398,6 +407,7 @@ import {
   getShowLyricsEnabled,
   setShowLyricsEnabled,
   setDisableVisualizer,
+  setDisableVizBlur,
   applyVisualizerVisibility,
   getKeepAwake,
   setKeepAwake,
@@ -421,6 +431,7 @@ import {
   setFullscreen,
   bindWebUiCursorIdle,
   clearWebUiFullscreenPinned,
+  syncPinnedFullscreenKeyboardLock,
   setCursorHidden,
   adjustVizBarCount,
   moveEqPresetsFocus,
@@ -703,6 +714,7 @@ import {
 const visualizer = createVisualizer(document.getElementById('viz-canvas'));
 setVizBarCount(getVizBarCount());
 applyVisualizerVisibility();
+applyVizBlurSetting();
 
 applyUiScalingClasses();
 ['(any-hover: hover)', '(any-pointer: fine)', '(hover: hover)', '(pointer: fine)']
@@ -920,7 +932,7 @@ function applyAndroidProgressStackTrim(progressTop, progressBottomEdge, gap) {
 }
 
 function applyPlaybackStackLayout(options = {}) {
-    const { immediate = false, reveal = false } = options;
+    const { immediate = false } = options;
     const controls = document.getElementById('controls-container');
     const progressWrapper = document.querySelector('.progress-wrapper');
     const info = document.querySelector('.info');
@@ -929,23 +941,31 @@ function applyPlaybackStackLayout(options = {}) {
     if (!controls) return;
     if (!mainBody.classList.contains('show-ui')) {
         resetPlaybackStackLayout();
-        mainBody.classList.remove('stack-layout-pending');
+        clearStackLayoutAnimationState();
         return;
     }
     if (mainBody.classList.contains('panel-open')) {
         return;
     }
-    if (mainBody.classList.contains('stack-layout-pending') && !reveal) return;
     if (!immediate && Date.now() < progressEnterAnimUntil && !isProgressLayoutGeometryStable()) return;
-    if (!info) return;
+    if (!info) {
+        return;
+    }
 
     const viewportH = window.innerHeight || 800;
     let gap = getStackLayoutGap();
-    const infoBottom = info.getBoundingClientRect().bottom;
-    const artFloor = Math.max(
-        infoBottom,
-        cover?.getBoundingClientRect().bottom || infoBottom,
-    );
+    let infoBottom;
+    let artFloor;
+    if (options.anchors) {
+        infoBottom = options.anchors.infoBottom;
+        artFloor = options.anchors.artFloor;
+    } else {
+        infoBottom = info.getBoundingClientRect().bottom;
+        artFloor = Math.max(
+            infoBottom,
+            cover?.getBoundingClientRect().bottom || infoBottom,
+        );
+    }
     const seekable = mainBody.classList.contains('progress-seekable');
     const progressHeight = (seekable && progressWrapper)
         ? Math.max(progressWrapper.offsetHeight, 24)
@@ -1013,8 +1033,7 @@ function applyPlaybackStackLayout(options = {}) {
     const controlsTopPx = Math.round(controlsTop);
     const progressBottom = Math.round(viewportH - progressBottomEdge);
     const layoutKey = `${controlsTopPx}|${progressBottom}|${seekable ? 1 : 0}`;
-    if (!options.force && !options.reveal && layoutKey === _playbackStackLayoutKey) {
-        mainBody.classList.remove('stack-layout-pending');
+    if (!options.force && layoutKey === _playbackStackLayoutKey) {
         return;
     }
     _playbackStackLayoutKey = layoutKey;
@@ -1024,32 +1043,70 @@ function applyPlaybackStackLayout(options = {}) {
     } else {
         progressWrapper?.style.removeProperty('--progress-bottom');
     }
-    mainBody.classList.remove('stack-layout-pending');
 }
 
-const STACK_REVEAL_FALLBACK_MS = 322;
-let stackRevealTimer = null;
+const PLAYBACK_CHROME_ENTER_MS = 350;
+const SHOW_UI_STAGE_Y_OFFSET_PX = 80;
+const SHOW_UI_STAGE_SCALE = 0.75;
+let showUiChromeLayoutTimer = null;
+let showUiChromeEnterActive = false;
 
-function clearStackRevealTimer() {
-    if (stackRevealTimer != null) {
-        clearTimeout(stackRevealTimer);
-        stackRevealTimer = null;
+function clearShowUiChromeLayoutTimer() {
+    if (showUiChromeLayoutTimer != null) {
+        clearTimeout(showUiChromeLayoutTimer);
+        showUiChromeLayoutTimer = null;
     }
 }
 
-function commitStackLayoutReveal() {
-    clearStackRevealTimer();
-    if (!mainBody.classList.contains('show-ui') || !mainBody.classList.contains('stack-layout-pending')) {
-        return;
-    }
-    applyPlaybackStackLayout({ immediate: true, reveal: true });
-    progressEnterAnimUntil = Date.now() + 348;
-    scheduleTitleLayoutRelayout();
+/** Predict show-ui stack anchors from layout box + known stage transform (avoids mid-transition measure). */
+function computeShowUiStackAnchors() {
+    const info = document.querySelector('.info');
+    const cover = document.querySelector('.cover-wrapper');
+    if (!playerStage || !info) return null;
+
+    const scale = SHOW_UI_STAGE_SCALE;
+    const vh = window.innerHeight;
+    const stageCenterY = (vh / 2) - SHOW_UI_STAGE_Y_OFFSET_PX;
+    const coverLayoutH = cover
+        ? (mainBody.classList.contains('show-ui') ? vh * 0.375 : cover.offsetHeight)
+        : 0;
+    const coverMargin = cover
+        ? (Number.parseFloat(getComputedStyle(cover).marginBottom) || 25)
+        : 0;
+    const infoLayoutH = info.offsetHeight;
+    const layoutH = coverLayoutH + coverMargin + infoLayoutH;
+    if (!layoutH) return null;
+
+    const visualTop = stageCenterY - (layoutH * scale) / 2;
+    const layoutInfoBottom = coverLayoutH + coverMargin + infoLayoutH;
+    const infoBottom = visualTop + layoutInfoBottom * scale;
+    const artFloor = visualTop + layoutH * scale;
+    return { infoBottom, artFloor };
 }
 
-function scheduleStackLayoutReveal() {
-    clearStackRevealTimer();
-    stackRevealTimer = window.setTimeout(commitStackLayoutReveal, STACK_REVEAL_FALLBACK_MS);
+function commitShowUiChromeLayout() {
+    clearShowUiChromeLayoutTimer();
+    showUiChromeEnterActive = true;
+    applyShowUiEnterTypography();
+    void playerStage?.offsetHeight;
+    const anchors = computeShowUiStackAnchors();
+    if (anchors) {
+        _playbackStackLayoutKey = '';
+        applyPlaybackStackLayout({ immediate: true, force: true, anchors });
+    }
+    progressEnterAnimUntil = Date.now() + PLAYBACK_CHROME_ENTER_MS + 48;
+    showUiChromeLayoutTimer = window.setTimeout(() => {
+        showUiChromeLayoutTimer = null;
+        showUiChromeEnterActive = false;
+        playerStage?.classList.remove('stage-handoff');
+        settleShowUiTitleMarquee();
+    }, PLAYBACK_CHROME_ENTER_MS);
+}
+
+function clearStackLayoutAnimationState() {
+    clearShowUiChromeLayoutTimer();
+    showUiChromeEnterActive = false;
+    playerStage?.classList.remove('stage-handoff');
 }
 
 function schedulePlaybackStackRelayoutAfterStage() {
@@ -1057,11 +1114,10 @@ function schedulePlaybackStackRelayoutAfterStage() {
     syncIdleProgressVisibility();
     if (!mainBody.classList.contains('show-ui') || isPanelOpen()) {
         refreshTitleLayout();
+        snapPlayerStageForIdleLayout();
         return;
     }
-    mainBody.classList.add('stack-layout-pending');
     refreshTitleLayout();
-    scheduleStackLayoutReveal();
 }
 function setPanelStatusText(el, label) {
     el.className = 'panel-divider panel-status';
@@ -1235,16 +1291,42 @@ function applyProgressLayoutNow() {
 function updateProgressLayout() {
     if (!mainBody.classList.contains('show-ui')) {
         resetPlaybackStackLayout();
-        mainBody.classList.remove('stack-layout-pending');
+        clearStackLayoutAnimationState();
+        snapPlayerStageForIdleLayout();
         return;
     }
     if (mainBody.classList.contains('panel-open')) return;
-    if (mainBody.classList.contains('stack-layout-pending')) return;
     applyPlaybackStackLayout({ immediate: true });
 }
 
+function collapseUiForDefaultArtIfIdle() {
+    if (getArtDisplayMode() !== 'default') return;
+    if (isPanelOpen()) return;
+    if (state.settingsMenuOpen || state.navMenuOpen || state.navGenresMenuOpen
+        || state.volumeMenuOpen || state.eqPresetsMenuOpen || state.vizModesMenuOpen
+        || state.artDisplayMenuOpen) return;
+    if (mainBody.classList.contains('show-ui')) return;
+    clearStackLayoutAnimationState();
+    snapPlayerStageForIdleLayout();
+}
+
+function clearPlayerStageInlineTransform() {
+    if (!playerStage) return;
+    if (getDvdFloater().running) return;
+    playerStage.style.removeProperty('transform');
+    playerStage.style.removeProperty('left');
+    playerStage.style.removeProperty('top');
+}
+
+function snapPlayerStageForIdleLayout() {
+    if (!playerStage) return;
+    if (getDvdFloater().running) return;
+    if (mainBody.classList.contains('panel-open')) return;
+    if (mainBody.classList.contains('show-ui')) return;
+    clearPlayerStageInlineTransform();
+}
+
 function scheduleProgressLayoutRelayout() {
-    if (mainBody.classList.contains('stack-layout-pending')) return;
     clearProgressLayoutTimers();
     progressLayoutTimers = [window.setTimeout(() => applyPlaybackStackLayout({ immediate: true }), 0)];
 }
@@ -1260,7 +1342,8 @@ function queueEventAppliesToLocal(objectId) {
 
 function scheduleLocalPlayerVisualCatchup(reason) {
     clearTimeout(state.localVisualCatchupTimer);
-    const delayMs = (reason === 'sync-state' && !state.playersPanelOpen) ? 650 : 350;
+    let delayMs = (reason === 'sync-state' && !state.playersPanelOpen) ? 650 : 350;
+    if (IS_TIZEN) delayMs = Math.max(delayMs, 900);
     state.localVisualCatchupTimer = setTimeout(async () => {
         state.localVisualCatchupTimer = null;
         if (reason === 'sync-state' && !state.playersPanelOpen) return;
@@ -1289,6 +1372,77 @@ function scheduleLocalPlayerVisualCatchup(reason) {
 }
 
 let playbackJoinRecoveryTimer = null;
+let playbackJoinRecoveryDebounceTimer = null;
+let pendingJoinRecoveryReason = 'join';
+
+async function runPlaybackJoinRecovery(reason = 'join') {
+    clearTimeout(playbackJoinRecoveryTimer);
+    let delayMs = IS_ANDROID
+        ? ANDROID_SYNC_JOIN_RECOVERY_DELAY_MS
+        : IS_TIZEN
+            ? TIZEN_SYNC_JOIN_RECOVERY_DELAY_MS
+            : SYNC_JOIN_RECOVERY_DELAY_MS;
+    if (reason === 'stream-start' && IS_ANDROID && isLocalPlayerInSyncGroupCached()) {
+        delayMs = ANDROID_STREAM_START_GROUP_RECOVERY_DELAY_MS;
+    }
+    if (reason === 'stream-start' && IS_TIZEN && isLocalPlayerInSyncGroupCached()) {
+        delayMs = TIZEN_STREAM_START_GROUP_RECOVERY_DELAY_MS;
+    }
+    const minAheadSec = IS_ANDROID ? ANDROID_PLAYBACK_BUFFER_MIN_AHEAD_SEC : PLAYBACK_BUFFER_MIN_AHEAD_SEC;
+    playbackJoinRecoveryTimer = setTimeout(async () => {
+        playbackJoinRecoveryTimer = null;
+        try {
+            await refreshLocalPlaybackSyncProfile();
+            if (IS_ANDROID && isLocalPlayerInSyncGroupCached()) {
+                window.playerInstance?.setBufferProfile?.('group');
+            }
+            const bufferReady = await waitForPlaybackBufferReady(
+                minAheadSec,
+                PLAYBACK_JOIN_BUFFER_WAIT_MS,
+            );
+            let shouldResync;
+            if (reason === 'stream-start') {
+                shouldResync = IS_ANDROID || !bufferReady;
+            } else {
+                shouldResync = true;
+            }
+            if (shouldResync) {
+                window.playerInstance?.forcePlaybackResync?.();
+            }
+            if (IS_ANDROID && !bufferReady) {
+                await waitForPlaybackBufferReady(minAheadSec, PLAYBACK_JOIN_BUFFER_WAIT_MS);
+                window.playerInstance?.forcePlaybackResync?.();
+            }
+            if (IS_ANDROID && reason === 'stream-start' && isLocalPlayerInSyncGroupCached()) {
+                await new Promise((resolve) => setTimeout(resolve, 800));
+                window.playerInstance?.forcePlaybackResync?.();
+            }
+        } catch (err) {
+            console.warn('playback join recovery failed:', reason, err);
+        }
+    }, delayMs);
+}
+
+function schedulePlaybackJoinRecovery(reason = 'join') {
+    pendingJoinRecoveryReason = reason;
+    clearTimeout(playbackJoinRecoveryDebounceTimer);
+    const debounceMs = IS_TIZEN ? TIZEN_SYNC_JOIN_RECOVERY_DEBOUNCE_MS : 0;
+    playbackJoinRecoveryDebounceTimer = setTimeout(() => {
+        playbackJoinRecoveryDebounceTimer = null;
+        void runPlaybackJoinRecovery(pendingJoinRecoveryReason);
+    }, debounceMs);
+}
+
+function isTvLazyLibraryBootstrap() {
+    return IS_TIZEN;
+}
+
+async function ensureTvLibraryBootstrap() {
+    if (!IS_TIZEN || state.tvLibraryBootstrapped) return;
+    state.tvLibraryBootstrapped = true;
+    void ensureMusicProvidersCached();
+    ensureLyricsBootstrapped();
+}
 
 async function waitForPlaybackBufferReady(minAheadSec, maxWaitMs) {
     const started = Date.now();
@@ -1308,45 +1462,6 @@ function isLocalPlayerInSyncGroupCached() {
     if (state.playersActiveGroup?.allIds?.includes(maClient.playerId)) return true;
     const local = state.playersListCache.find((p) => p.player_id === maClient.playerId);
     return !!(local?.synced_to || local?.group_members?.length);
-}
-
-function schedulePlaybackJoinRecovery(reason = 'join') {
-    clearTimeout(playbackJoinRecoveryTimer);
-    let delayMs = IS_ANDROID ? ANDROID_SYNC_JOIN_RECOVERY_DELAY_MS : SYNC_JOIN_RECOVERY_DELAY_MS;
-    if (reason === 'stream-start' && IS_ANDROID && isLocalPlayerInSyncGroupCached()) {
-        delayMs = ANDROID_STREAM_START_GROUP_RECOVERY_DELAY_MS;
-    }
-    const minAheadSec = IS_ANDROID ? ANDROID_PLAYBACK_BUFFER_MIN_AHEAD_SEC : PLAYBACK_BUFFER_MIN_AHEAD_SEC;
-    playbackJoinRecoveryTimer = setTimeout(async () => {
-        playbackJoinRecoveryTimer = null;
-        try {
-            await refreshLocalPlaybackSyncProfile();
-            if (IS_ANDROID && isLocalPlayerInSyncGroupCached()) {
-                window.playerInstance?.setBufferProfile?.('group');
-            }
-            const bufferReady = await waitForPlaybackBufferReady(
-                minAheadSec,
-                PLAYBACK_JOIN_BUFFER_WAIT_MS,
-            );
-            const shouldResync = reason !== 'stream-start'
-                || IS_ANDROID
-                || isLocalPlayerInSyncGroupCached()
-                || !bufferReady;
-            if (shouldResync) {
-                window.playerInstance?.forcePlaybackResync?.();
-            }
-            if (IS_ANDROID && !bufferReady) {
-                await waitForPlaybackBufferReady(minAheadSec, PLAYBACK_JOIN_BUFFER_WAIT_MS);
-                window.playerInstance?.forcePlaybackResync?.();
-            }
-            if (IS_ANDROID && reason === 'stream-start' && isLocalPlayerInSyncGroupCached()) {
-                await new Promise((resolve) => setTimeout(resolve, 800));
-                window.playerInstance?.forcePlaybackResync?.();
-            }
-        } catch (err) {
-            console.warn('playback join recovery failed:', reason, err);
-        }
-    }, delayMs);
 }
 
 function applySyncGroupCorrectionMode(inGroup) {
@@ -1441,7 +1556,7 @@ async function retryMaConnection() {
         await maClient.ensureReady();
         setStatus(`connected · ${playerName}`, getShowConnection() ? 'connected' : '');
         if (state.browsePanelOpen) {
-            await uiH('loadCurrentBrowseView');
+            await uiH('loadCurrentBrowseView', { forceRefresh: true });
         }
         if (state.queuePanelOpen) {
             void uiH('loadQueueItems', true);
@@ -4472,7 +4587,8 @@ function scheduleTizenAudioKick(reason = 'stream-start') {
             if (!player || !ap || !ctx || ctx.state !== 'running') return;
             const ahead = ap.getScheduledAheadSec?.(ctx.currentTime ?? 0) ?? 0;
             const queued = (ap.audioBufferQueue?.length ?? 0) + (ap.scheduledSources?.length ?? 0);
-            if (queued > 0 && ahead < 0.05) {
+            const minAhead = isLocalPlayerInSyncGroupCached() ? 0.2 : 0.05;
+            if (queued > 0 && ahead < minAhead) {
                 try {
                     player.forcePlaybackResync();
                 } catch (err) {
@@ -4648,6 +4764,11 @@ async function init() {
         syncDelay: 0,
         correctionMode: IS_ANDROID ? 'sync' : 'quality-local',
         useOutputLatencyCompensation: true,
+        ...(IS_TIZEN ? {
+            isTizen: true,
+            useMediaElementOutput: true,
+            bufferCapacity: TIZEN_SENDSPIN_BUFFER_CAPACITY,
+        } : {}),
         onDelayCommand: () => {
             if (!maClient.playerId) return;
             void readPlayerPlaybackOffsets(maClient.playerId, { bypassCache: true }).then(({ staticMs, trimMs }) => {
@@ -4772,6 +4893,7 @@ async function init() {
                 );
                 if (maBehind || spinTrackChanged) {
                     requestNowPlayingVisuals('spin-metadata', { force: forceSpinVisuals || maBehind });
+                    if (spinTrackChanged) collapseUiForDefaultArtIfIdle();
                 }
                 syncAndroidMediaSession();
 
@@ -4827,7 +4949,11 @@ async function init() {
         setStatus(`connected · ${savedName}`, 'connected');
         tryAttachVisualizer();
         startMaModeSync();
-        void syncNavMenuState();
+        if (!IS_TIZEN) {
+            void syncNavMenuState();
+        } else if (lyricsPrefEnabled()) {
+            ensureLyricsBootstrapped();
+        }
         void initAndroidMediaSession();
         bindAudioLifecycleRecovery();
         startAudioHealthWatchdog();
@@ -4982,6 +5108,10 @@ menuDisableVisualizerBtn.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
     setDisableVisualizer(!getDisableVisualizer());
 });
+menuDisableVizBlurBtn?.addEventListener('click', () => {
+    if (Date.now() < getIgnoreClickUntil()) return;
+    setDisableVizBlur(!getDisableVizBlur());
+});
 menuEqPresetsBtn.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
     void openEqPresetsMenu();
@@ -5029,10 +5159,10 @@ window.addEventListener('orientationchange', () => {
     schedulePlaybackStackRelayoutAfterStage();
 });
 playerStage.addEventListener('transitionend', (e) => {
-    if (e.propertyName !== 'transform') return;
-    if (mainBody.classList.contains('stack-layout-pending')) {
-        commitStackLayoutReveal();
-    }
+    if (e.propertyName !== 'transform' || e.target !== playerStage) return;
+    if (!mainBody.classList.contains('show-ui') || mainBody.classList.contains('panel-open')) return;
+    if (showUiChromeEnterActive || Date.now() < progressEnterAnimUntil) return;
+    applyPlaybackStackLayout({ immediate: true });
 });
 bindProgressScrubbing();
 playBtn.addEventListener('click', togglePlayPause);
@@ -5292,11 +5422,18 @@ registerUiHandlers({
     pauseUiHideTimer,
     stopDvdFloater: () => stopArtDisplayMotion(true),
     stopDvdFloaterSoft: () => stopArtDisplayMotion(false),
-    scheduleStackLayoutReveal,
+    scheduleShowUiChromeLayout: commitShowUiChromeLayout,
+    commitShowUiChromeLayout,
+    clearStackLayoutAnimationState,
     applyPlaybackStackLayout,
+    clearPlayerStageInlineTransform,
     updateFloatState,
     ensureLyricsBootstrapped,
     schedulePlaybackStackRelayoutAfterStage,
+    clearDefaultArtStageInlineTransform: snapPlayerStageForIdleLayout,
+    snapDefaultArtStageIdle: snapPlayerStageForIdleLayout,
+    snapPlayerStageForIdleLayout,
+    collapseUiForDefaultArtIfIdle,
     resumeUiHideTimer,
     updatePanelFocus,
     setStatus,
@@ -5351,6 +5488,8 @@ registerUiHandlers({
     formatRadioStationFullLine,
     scheduleLocalPlayerVisualCatchup,
     schedulePlaybackJoinRecovery,
+    isTvLazyLibraryBootstrap,
+    ensureTvLibraryBootstrap,
     applySyncGroupCorrectionMode,
     panelKeyboardFocusActive,
     syncVolumeUi,
@@ -5381,7 +5520,7 @@ registerUiHandlers({
     togglePlayPause,
     cycleRepeat,
     sendPlayerCommand,
-    clearStackRevealTimer,
+    clearStackLayoutAnimationState,
     resetPlaybackStackLayout,
     invalidateIdleProgressVisibility,
     scheduleIdleProgressVisibilitySync,
@@ -5534,10 +5673,11 @@ mainBody.classList.toggle('show-connection', getShowConnection());
 syncWebUiOnlySettings();
 bindWebUiCursorIdle();
 document.addEventListener('fullscreenchange', () => {
-    // Respect the browser's own exit-fullscreen (Esc / hold-Esc) instead
-    // of forcing it back on. Just keep our pin flag + checkbox in sync.
+    // Browser hold-Esc exits fullscreen when Keyboard Lock is active; keep pin + checkbox in sync.
     if (isBrowserUi() && !document.fullscreenElement) {
         clearWebUiFullscreenPinned();
+    } else if (isBrowserUi() && document.fullscreenElement) {
+        void syncPinnedFullscreenKeyboardLock();
     }
     syncSettingsMenuChecks();
 });

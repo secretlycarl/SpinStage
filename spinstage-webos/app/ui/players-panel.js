@@ -488,7 +488,7 @@ async function dissolveSyncGroupFully(group) {
     const ids = await collectSyncGroupUngroupIds(group);
     if (ids.length) {
         await maClient.send('players/cmd/ungroup_many', { player_ids: ids });
-        await waitForPlayersGroupCleared(ids, { maxAttempts: 10 });
+        await waitForPlayersGroupCleared(ids);
     }
     const leaderCleared = await waitForLeaderGroupEmpty(group.leaderId);
     if (!leaderCleared) {
@@ -503,7 +503,35 @@ async function dissolveSyncGroupFully(group) {
                 }
             }
         }
-        await waitForLeaderGroupEmpty(group.leaderId, { maxAttempts: 10 });
+        await waitForLeaderGroupEmpty(group.leaderId);
+    }
+}
+
+
+
+async function verifyLeaderGroupDissolved(leaderId) {
+    if (!leaderId) return true;
+    return waitForLeaderGroupEmpty(leaderId, { maxAttempts: 5, stepMs: 250 });
+}
+
+
+
+async function verifySyncGroupFormed(leaderId, memberIds) {
+    if (!leaderId) return false;
+    try {
+        const players = await maClient.send('players/all', {});
+        const byId = new Map(players.map((p) => [p.player_id, p]));
+        const leader = byId.get(leaderId);
+        if (!leader) return false;
+        const idsToCheck = memberIds?.length
+            ? memberIds
+            : (leader.group_members || []).filter((id) => id !== leaderId);
+        if (!idsToCheck.length) return false;
+        const probe = { leaderId, allIds: [leaderId, ...idsToCheck] };
+        return idsToCheck.every((id) => isPlayerInSyncGroup(id, probe, byId));
+    } catch (err) {
+        console.warn('verifySyncGroupFormed failed:', err);
+        return false;
     }
 }
 
@@ -3049,37 +3077,55 @@ async function leaveActiveSyncGroup() {
 
 
 
-async function splitActiveSyncGroup() {
-    const group = getAnyMaSyncGroup();
-    if (!group?.leaderId) return;
-    const playerName = getDefaultPlayerName();
+async function finishSyncGroupSplit(group, playerName) {
     const clearIds = [...group.allIds];
     const resetIds = group.isStereo
         ? [group.leftId, group.rightId].filter(Boolean)
         : [];
+    await clearPlayersSyncDelays(clearIds);
+    if (resetIds.length) await resetPlayersOutputChannels(resetIds);
+    await maClient.refreshActiveQueue();
+    if (state.queuePanelOpen) loadQueueItems(true);
+    requestNowPlayingVisuals('unsync', { force: true });
+    state.playersSyncSelected.clear();
+    state.playersSyncSelectedOrder = [];
+    state.playersActiveGroup = null;
+    state.playersRemoteGroup = null;
+    applyLocalGroupCorrectionMode();
+    uiH('setStatus', group.isStereo ? 'stereo pair split' : 'sync group split', 'connected');
+    setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+    void loadPlayersList(true);
+}
+
+
+
+async function splitActiveSyncGroup() {
+    const group = getAnyMaSyncGroup();
+    if (!group?.leaderId) return;
+    const playerName = getDefaultPlayerName();
+    const leaderId = group.leaderId;
     try {
         await maClient.ensureReady();
         state.playersLoading = true;
         updatePlayersSyncUi();
         uiH('setStatus', 'splitting sync group…', '');
         await dissolveSyncGroupFully(group);
-        await clearPlayersSyncDelays(clearIds);
-        if (resetIds.length) await resetPlayersOutputChannels(resetIds);
-        await maClient.refreshActiveQueue();
-        if (state.queuePanelOpen) loadQueueItems(true);
-        requestNowPlayingVisuals('unsync', { force: true });
-        state.playersSyncSelected.clear();
-        state.playersSyncSelectedOrder = [];
-        state.playersActiveGroup = null;
-        state.playersRemoteGroup = null;
-        applyLocalGroupCorrectionMode();
-        uiH('setStatus', group.isStereo ? 'stereo pair split' : 'sync group split', 'connected');
-        setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
-        void loadPlayersList(true);
+        await finishSyncGroupSplit(group, playerName);
     } catch (err) {
         console.warn('split sync group failed:', err);
-        uiH('setStatus', 'split failed', 'error');
-        setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+        const dissolved = await verifyLeaderGroupDissolved(leaderId);
+        if (dissolved) {
+            try {
+                await finishSyncGroupSplit(group, playerName);
+            } catch (finishErr) {
+                console.warn('split sync group finish failed:', finishErr);
+                uiH('setStatus', 'split failed', 'error');
+                setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+            }
+        } else {
+            uiH('setStatus', 'split failed', 'error');
+            setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+        }
     } finally {
         state.playersLoading = false;
         updatePlayersSyncUi();
@@ -3096,6 +3142,9 @@ async function syncPlayersGroup(selectedIds, {
     if (selectedIds.length < 2) return;
     const playerName = getDefaultPlayerName();
     const statusStereo = stereoWithLocalLeader ? 'stereo + lead here' : 'stereo pair';
+    let leaderId = forcedLeaderId || null;
+    let memberIds = [];
+    let groupIds = [];
     try {
         await maClient.ensureReady();
         state.playersLoading = true;
@@ -3103,7 +3152,6 @@ async function syncPlayersGroup(selectedIds, {
         let players = await repairSelectedPlayersGroupState(selectedIds);
         const playersById = new Map(players.map((p) => [p.player_id, p]));
         let speakerIds = selectedIds;
-        let leaderId = forcedLeaderId || null;
         if (stereoWithLocalLeader) {
             const localId = maClient.playerId;
             if (!localId || selectedIds.includes(localId) || selectedIds.length !== 2) {
@@ -3127,7 +3175,7 @@ async function syncPlayersGroup(selectedIds, {
             setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
             return;
         }
-        const groupIds = stereoWithLocalLeader
+        groupIds = stereoWithLocalLeader
             ? [leaderId, ...speakerIds]
             : selectedIds;
         if (!playersCanSyncTogether(leaderId, groupIds.filter((id) => id !== leaderId), playersById)) {
@@ -3153,7 +3201,7 @@ async function syncPlayersGroup(selectedIds, {
         } else {
             await resetPlayersOutputChannels(groupIds);
         }
-        const memberIds = groupIds.filter((id) => id !== leaderId);
+        memberIds = groupIds.filter((id) => id !== leaderId);
         const leaderQueueId = await resolvePlayerQueueId(leaderId);
         const sourceQueueId = await findQueueSourceAmongSelected(groupIds, playersById, leaderId);
         let queueTransferred = false;
@@ -3211,8 +3259,27 @@ async function syncPlayersGroup(selectedIds, {
         void loadPlayersList(true);
     } catch (err) {
         console.warn(stereoPair ? `${statusStereo} failed:` : 'sync players failed:', err);
-        uiH('setStatus', stereoPair ? `${statusStereo} failed` : 'sync failed', 'error');
-        setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+        const formed = await verifySyncGroupFormed(leaderId, memberIds);
+        if (formed) {
+            await loadGroupSyncDelays(groupIds);
+            if (groupIds.includes(maClient.playerId)) {
+                await refreshLocalPlaybackSyncProfile().catch(() => {});
+            }
+            await maClient.refreshActiveQueue();
+            if (state.queuePanelOpen) loadQueueItems(true);
+            void loadPlayersList(true);
+            const playersById = new Map((await fetchMaPlayers()).map((p) => [p.player_id, p]));
+            const leader = playersById.get(leaderId);
+            const leaderName = leader?.display_name || leader?.name || 'leader';
+            const okLabel = stereoWithLocalLeader
+                ? `${statusStereo} · ${leaderName}`
+                : stereoPair ? `stereo pair on ${leaderName}` : `synced on ${leaderName}`;
+            uiH('setStatus', okLabel, 'connected');
+            setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+        } else {
+            uiH('setStatus', stereoPair ? `${statusStereo} failed` : 'sync failed', 'error');
+            setTimeout(() => uiH('setStatus', `connected · ${playerName}`, getShowConnection() ? 'connected' : ''), 2500);
+        }
     } finally {
         state.playersLoading = false;
         updatePlayersSyncUi();

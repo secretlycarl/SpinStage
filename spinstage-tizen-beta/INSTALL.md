@@ -185,6 +185,7 @@ Remote: **Back** exits the app on Tizen.
 
 | Issue | Check |
 |-------|--------|
+| `NoClassDefFoundError: org/eclipse/core/runtime/Plugin` on `build-web` | Known **Tizen Studio 6.1.x** CLI bug. **`package` / `install` can still work** if `.buildResult` already exists (e.g. from Tizen IDE or an earlier successful build). Use `build-install.bat` — it warns and continues when `build-web` fails but `.buildResult` is present. Long-term: Tizen Studio **6.0**, or install **Native CLI** in Package Manager. |
 | `Specify location of the working directory` | Pass a real absolute path to `build-web` / `package`; use `.buildResult` only for `package`. |
 | `package` / signing fails | Cert profile name matches `-s`; Certificate Manager profile complete; TV 10-digit code added to distributor cert. |
 | `sdb connect` fails | TV Developer Mode on; PC IP allowed on TV; same subnet; try reboot TV. |

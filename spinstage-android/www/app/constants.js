@@ -76,6 +76,12 @@ export const SYNC_DELAY_CUTOVER_DEBOUNCE_MS = 400;
 
 export const SYNC_JOIN_RECOVERY_DELAY_MS = 800;
 
+export const TIZEN_SYNC_JOIN_RECOVERY_DELAY_MS = 2200;
+
+export const TIZEN_SYNC_JOIN_RECOVERY_DEBOUNCE_MS = 700;
+
+export const TIZEN_STREAM_START_GROUP_RECOVERY_DELAY_MS = 1800;
+
 export const ANDROID_SYNC_JOIN_RECOVERY_DELAY_MS = 2400;
 
 export const ANDROID_STREAM_START_GROUP_RECOVERY_DELAY_MS = 500;
@@ -93,6 +99,11 @@ export const SYNC_DELAY_LEGACY_KEYS = ['sendspin_sync_delay', 'sync_delay', 'sta
 export const PLAYBACK_BUFFER_MIN_AHEAD_SEC = 0.35;
 
 export const PLAYBACK_JOIN_BUFFER_WAIT_MS = 4000;
+
+/** Advertised to Sendspin hello — smaller catch-up burst on weak TV clients. */
+export const TIZEN_SENDSPIN_BUFFER_CAPACITY = 1024 * 1024;
+
+export const SENDSPIN_BUFFER_CAPACITY_DEFAULT = 2 * 1024 * 1024;
 
 export const MA_PROTOCOL_KEY_SPLITTER = '||protocol||';
 
@@ -235,9 +246,13 @@ export const RADIO_SWITCH_INFO_KEY = 'spinstage_radio_switch_info';
 
 export const DISABLE_VISUALIZER_KEY = 'spinstage_disable_visualizer';
 
+export const DISABLE_VIZ_BLUR_KEY = 'spinstage_disable_viz_blur';
+
 export const VIZ_BAR_COUNT_KEY = 'spinstage_viz_bar_count';
 
-/** Platform defaults: webOS lowest, Android mid, browser/web UI highest. */
+/** Platform defaults: Tizen lowest, webOS low, Android mid, browser/web UI highest. */
+export const VIZ_BAR_COUNT_DEFAULT_TIZEN = 13;
+
 export const VIZ_BAR_COUNT_DEFAULT_WEBOS = 33;
 
 export const VIZ_BAR_COUNT_DEFAULT_ANDROID = 37;
@@ -266,6 +281,8 @@ export const VIZ_CYCLE_INDEX_KEY = 'spinstage_viz_cycle_index';
 export const VIZ_FPS_KEY = 'spinstage_viz_fps';
 
 export const VIZ_FPS_NOTCHES = [12, 24, 30, 60, 90, 120, 144];
+
+export const VIZ_FPS_DEFAULT_TIZEN = 24;
 
 export const VIZ_FPS_DEFAULT_WEBOS = 24;
 

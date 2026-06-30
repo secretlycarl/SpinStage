@@ -102,13 +102,17 @@ const CORRECTION_THRESHOLDS = {
     },
 };
 const SYNC_DELAY_CUTOVER_DEBOUNCE_MS = 400;
+const TIZEN_CATCHUP_QUEUE_HIGH_WATER = 100;
+const TIZEN_CATCHUP_MAX_CHUNKS_PER_CYCLE = 6;
+const TIZEN_CATCHUP_SCHEDULE_MS = 28;
 class AudioProcessor {
-    constructor(stateManager, timeFilter, outputMode = "direct", audioElement, isAndroid = false, ownsAudioElement = false, silentAudioSrc, syncDelayMs = 0, useHardwareVolume = false, correctionMode = "sync", storage = null, useOutputLatencyCompensation = true) {
+    constructor(stateManager, timeFilter, outputMode = "direct", audioElement, isAndroid = false, ownsAudioElement = false, silentAudioSrc, syncDelayMs = 0, useHardwareVolume = false, correctionMode = "sync", storage = null, useOutputLatencyCompensation = true, isTizen = false) {
         this.stateManager = stateManager;
         this.timeFilter = timeFilter;
         this.outputMode = outputMode;
         this.audioElement = audioElement;
         this.isAndroid = isAndroid;
+        this.isTizen = isTizen;
         this.ownsAudioElement = ownsAudioElement;
         this.silentAudioSrc = silentAudioSrc;
         this.syncDelayMs = syncDelayMs;
@@ -1485,12 +1489,15 @@ class AudioProcessor {
             return;
         }
         this.queueProcessScheduled = true;
+        const catchupMode = this.isTizen &&
+            this.audioBufferQueue.length >= TIZEN_CATCHUP_QUEUE_HIGH_WATER;
+        const delayMs = catchupMode ? TIZEN_CATCHUP_SCHEDULE_MS : 15;
         if (typeof globalThis.setTimeout === "function") {
             this.scheduleTimeout = globalThis.setTimeout(() => {
                 this.scheduleTimeout = null;
                 this.queueProcessScheduled = false;
                 this.processAudioQueue();
-            }, 15);
+            }, delayMs);
             return;
         }
         const run = () => {
@@ -1713,10 +1720,20 @@ class AudioProcessor {
             }
         }
         // Schedule chunks until we have enough future audio to survive short JS throttling.
+        const catchupMode = this.isTizen &&
+            this.audioBufferQueue.length >= TIZEN_CATCHUP_QUEUE_HIGH_WATER;
+        const maxChunksThisCycle = catchupMode
+            ? TIZEN_CATCHUP_MAX_CHUNKS_PER_CYCLE
+            : Number.POSITIVE_INFINITY;
+        let chunksThisCycle = 0;
         while (this.audioBufferQueue.length > 0) {
             const scheduledAheadSec = this.getScheduledAheadSec(audioContextRawTimeSec);
             if (this.nextPlaybackTime > 0 &&
                 scheduledAheadSec >= targetScheduledHorizonSec) {
+                break;
+            }
+            if (chunksThisCycle >= maxChunksThisCycle) {
+                this.scheduleQueueProcessing();
                 break;
             }
             const chunk = this.audioBufferQueue.shift();
@@ -1878,6 +1895,7 @@ class AudioProcessor {
                 generation: chunk.generation,
             };
             this.scheduledSources.push(scheduledEntry);
+            chunksThisCycle++;
             source.onended = () => {
                 try {
                     source.disconnect();
@@ -3065,6 +3083,11 @@ function detectIsIOS() {
 function detectIsMobile() {
     return detectIsAndroid() || detectIsIOS();
 }
+function detectIsTizen() {
+    if (typeof navigator === "undefined")
+        return false;
+    return /SMART-TV|Tizen/i.test(navigator.userAgent);
+}
 function detectIsSafari() {
     if (typeof navigator === "undefined")
         return false;
@@ -3110,12 +3133,15 @@ class SendspinPlayer {
         const clientName = config.clientName ?? `Sendspin JS Client (${randomId})`;
         // Auto-detect platform
         const isAndroid = detectIsAndroid();
+        const isTizen = config.isTizen ?? detectIsTizen();
         const isMobile = detectIsMobile();
         // Determine output mode:
         // - If audioElement provided, use media-element
         // - If mobile (iOS/Android), default to media-element
+        // - Tizen TV: media-element offloads playback from the main thread
         // - Otherwise, use direct
-        const outputMode = config.audioElement || isMobile ? "media-element" : "direct";
+        const useMediaElement = config.audioElement || isMobile || config.useMediaElementOutput || isTizen;
+        const outputMode = useMediaElement ? "media-element" : "direct";
         this.ownsAudioElement =
             outputMode === "media-element" && !config.audioElement;
         if (this.ownsAudioElement && typeof document === "undefined") {
@@ -3139,7 +3165,7 @@ class SendspinPlayer {
         else if (typeof localStorage !== "undefined") {
             storage = localStorage;
         }
-        this.audioProcessor = new AudioProcessor(this.stateManager, this.timeFilter, outputMode, config.audioElement, isAndroid, this.ownsAudioElement, isAndroid ? SILENT_AUDIO_SRC : undefined, config.syncDelay ?? getDefaultSyncDelay(), config.useHardwareVolume ?? false, config.correctionMode ?? "sync", storage, config.useOutputLatencyCompensation ?? true);
+        this.audioProcessor = new AudioProcessor(this.stateManager, this.timeFilter, outputMode, config.audioElement, isAndroid, this.ownsAudioElement, isAndroid ? SILENT_AUDIO_SRC : undefined, config.syncDelay ?? getDefaultSyncDelay(), config.useHardwareVolume ?? false, config.correctionMode ?? "sync", storage, config.useOutputLatencyCompensation ?? true, isTizen);
         // Initialize WebSocket manager
         this.wsManager = new WebSocketManager();
         // Initialize protocol handler

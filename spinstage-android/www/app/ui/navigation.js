@@ -43,6 +43,7 @@ import {
     menuShowConnectionBtn,
     menuArtDisplayBtn,
     menuDisableVisualizerBtn,
+    menuDisableVizBlurBtn,
     menuEqPresetsBtn,
     menuSwitchInfoBtn,
     menuVizModesBtn,
@@ -61,12 +62,15 @@ import {
     getShowConnection,
     setShowConnection,
     setDisableVisualizer,
+    setDisableVizBlur,
     openEqPresetsMenu,
     openVizModesMenu,
     openArtDisplayMenu,
     isFullscreen,
     setFullscreen,
     setCursorHidden,
+    consumePinnedFullscreenEscKeyDown,
+    consumePinnedFullscreenEscKeyUp,
     updateMenuFocus,
     closeSettingsMenu,
     closeEqPresetsMenu,
@@ -184,7 +188,7 @@ import {
 } from './players-panel.js';
 import { closeDetailsPanel } from './details.js';
 import { chipVerticalTarget } from '../util/chips.js';
-import { getDisableVisualizer } from '../playback/visualizer.js';
+import { getDisableVisualizer, getDisableVizBlur } from '../playback/visualizer.js';
 import { isBrowserUi, isWebUi, useTieredFocus } from '../platform.js';
 import { uiH } from './handlers.js';
 import { npH } from '../playback/handlers.js';
@@ -1403,6 +1407,10 @@ function activateMenuItem() {
         setDisableVisualizer(!getDisableVisualizer());
         return;
     }
+    if (item === menuDisableVizBlurBtn) {
+        setDisableVizBlur(!getDisableVizBlur());
+        return;
+    }
     if (item === menuEqPresetsBtn) {
         void openEqPresetsMenu();
         return;
@@ -1529,9 +1537,10 @@ function hideUI() {
     closeAllPanels();
     clearLyricsIdleFocus();
     mainBody.classList.add('show-ui-exiting');
-    mainBody.classList.remove('show-ui', 'stack-layout-pending');
-    uiH('clearStackRevealTimer');
+    mainBody.classList.remove('show-ui');
+    uiH('clearStackLayoutAnimationState');
     uiH('resetPlaybackStackLayout');
+    uiH('snapPlayerStageForIdleLayout');
     pauseUiHideTimer();
     focusableControls.forEach(el => {
         el.classList.remove('focused');
@@ -1553,7 +1562,8 @@ function hideUI() {
     window.setTimeout(() => {
         mainBody.classList.remove('show-ui-exiting');
         uiH('refreshTitleLayout');
-    }, 320);
+        uiH('snapPlayerStageForIdleLayout');
+    }, 350);
     if (isBrowserUi()) setCursorHidden(true);
 }
 
@@ -1685,8 +1695,16 @@ function handleAppBack() {
 }
 
 function consumeBackKey(e) {
+    if (e.type === 'keyup') {
+        if (consumePinnedFullscreenEscKeyUp(e)) return true;
+        return false;
+    }
     const code = e.keyCode || e.which;
     if (!isBackKey(e, code)) return false;
+    if (consumePinnedFullscreenEscKeyDown(e)) {
+        handleAppBack();
+        return true;
+    }
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -1708,15 +1726,21 @@ function showUI(options = {}) {
     }
     const enteringShowUi = !mainBody.classList.contains('show-ui');
     if (enteringShowUi) {
-        mainBody.classList.add('show-ui', 'stack-layout-pending');
+        const fromFloat = mainBody.classList.contains('dvd-float');
+        const fromCorner = mainBody.classList.contains('art-corner-info');
+        if (fromFloat || fromCorner) {
+            playerStage?.classList.add('stage-handoff');
+        } else {
+            uiH('clearPlayerStageInlineTransform');
+        }
+        mainBody.classList.add('show-ui');
     }
     uiH('invalidateIdleProgressVisibility');
     uiH('syncIdleProgressVisibility');
-    uiH('stopDvdFloaterSoft');
-    uiH('updateFloatState');
-    if (mainBody.classList.contains('stack-layout-pending')) {
-        uiH('scheduleStackLayoutReveal');
-    } else if (enteringShowUi || options.relayout) {
+    uiH('updateFloatState', null, { skipTitleRelayout: true });
+    if (enteringShowUi) {
+        uiH('commitShowUiChromeLayout');
+    } else if (options.relayout) {
         uiH('applyPlaybackStackLayout', { immediate: true });
     }
     if (!state.settingsMenuOpen && !state.navMenuOpen && !state.volumeMenuOpen && !state.eqPresetsMenuOpen && !state.vizModesMenuOpen && !blocksUiAutoHide()) resumeUiHideTimer();
@@ -2180,6 +2204,9 @@ function handleGlobalKeydown(e) {
 
 function bindKeyboardNavigation() {
     document.addEventListener('keydown', (e) => {
+        consumeBackKey(e);
+    }, true);
+    document.addEventListener('keyup', (e) => {
         consumeBackKey(e);
     }, true);
     window.addEventListener('keydown', handleGlobalKeydown);

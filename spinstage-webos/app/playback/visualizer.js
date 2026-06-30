@@ -4,12 +4,14 @@
 import { parseCssColor } from '../util/color.js';
 import {
   VIZ_BAR_COUNT_KEY,
+  VIZ_BAR_COUNT_DEFAULT_TIZEN,
   VIZ_BAR_COUNT_DEFAULT_WEBOS,
   VIZ_BAR_COUNT_DEFAULT_ANDROID,
   VIZ_BAR_COUNT_DEFAULT_WEBUI,
   VIZ_BAR_COUNT_MIN,
   VIZ_BAR_COUNT_MAX,
   DISABLE_VISUALIZER_KEY,
+  DISABLE_VIZ_BLUR_KEY,
   VIZ_MODE_KEY,
   VIZ_MODES_STACK_KEY,
   VIZ_SHUFFLE_KEY,
@@ -18,6 +20,7 @@ import {
   VIZ_CYCLE_INDEX_KEY,
   VIZ_FPS_KEY,
   VIZ_FPS_NOTCHES,
+  VIZ_FPS_DEFAULT_TIZEN,
   VIZ_FPS_DEFAULT_WEBOS,
   VIZ_FPS_DEFAULT_ANDROID,
   VIZ_FPS_DEFAULT_WEBUI,
@@ -36,6 +39,7 @@ const TIZEN_VIZ_DRAW_FILTER = 'blur(24px) brightness(1.15) saturate(1.25)';
 export { VIZ_MODES };
 
 export function getDefaultVizBarCount() {
+    if (IS_TIZEN) return VIZ_BAR_COUNT_DEFAULT_TIZEN;
     if (IS_ANDROID) return VIZ_BAR_COUNT_DEFAULT_ANDROID;
     if (IS_TV_REMOTE) return VIZ_BAR_COUNT_DEFAULT_WEBOS;
     return VIZ_BAR_COUNT_DEFAULT_WEBUI;
@@ -59,8 +63,32 @@ export function getVizBarCount() {
     return normalizeVizBarCount(raw);
 }
 
+export function getDefaultDisableVisualizer() {
+    return IS_TIZEN;
+}
+
 export function getDisableVisualizer() {
-    return localStorage.getItem(DISABLE_VISUALIZER_KEY) === '1';
+    const raw = localStorage.getItem(DISABLE_VISUALIZER_KEY);
+    if (raw == null || raw === '') return getDefaultDisableVisualizer();
+    return raw === '1';
+}
+
+export function getDefaultDisableVizBlur() {
+    return IS_TIZEN;
+}
+
+export function getDisableVizBlur() {
+    const raw = localStorage.getItem(DISABLE_VIZ_BLUR_KEY);
+    if (raw == null || raw === '') return getDefaultDisableVizBlur();
+    return raw === '1';
+}
+
+export function setDisableVizBlurStorage(enabled) {
+    localStorage.setItem(DISABLE_VIZ_BLUR_KEY, enabled ? '1' : '0');
+}
+
+export function applyVizBlurSetting() {
+    document.body.classList.toggle('viz-blur-off', getDisableVizBlur());
 }
 
 export function normalizeVizMode(mode) {
@@ -219,6 +247,7 @@ export function isVizModeActiveInUi(modeId) {
 }
 
 export function getDefaultVizFps() {
+    if (IS_TIZEN) return VIZ_FPS_DEFAULT_TIZEN;
     if (IS_TV_REMOTE) return VIZ_FPS_DEFAULT_WEBOS;
     if (IS_ANDROID) return VIZ_FPS_DEFAULT_ANDROID;
     return VIZ_FPS_DEFAULT_WEBUI;
@@ -562,7 +591,7 @@ class AudioVisualizer {
     }
 
     _beginDrawFilter(ctx) {
-        if (!IS_TIZEN || !ctx) return false;
+        if (!IS_TIZEN || !ctx || getDisableVizBlur()) return false;
         ctx.save();
         ctx.filter = TIZEN_VIZ_DRAW_FILTER;
         return true;

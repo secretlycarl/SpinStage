@@ -75,6 +75,7 @@ import {
     refreshBrowseFilterChipStates,
     syncSearchInputValue,
     ensureSearchProviders,
+    ensureSearchResultsEntry,
     runBrowseSearch,
     rerunBrowseSearch,
     closeProviderMenu,
@@ -900,6 +901,7 @@ async function openBrowsePanelWithStack(stack, options = {}) {
     uiH('closePlayersPanel');
     uiH('closeDetailsPanel');
     uiH('syncPanelInputModeForOpen');
+    await uiH('ensureTvLibraryBootstrap');
     state.browsePanelOpen = true;
     state.browseStack = stack;
     state.browseEntryMode = options.entryMode || 'manual';
@@ -2928,18 +2930,56 @@ async function fetchBrowseItemsForEntry(entry) {
 
 
 
-async function loadCurrentBrowseView(opts = {}) {
+function isBrowsePlaceholderItem(item) {
+    if (!item) return true;
+    if (item.kind === 'ma_disconnected') return false;
+    if (item.kind === 'empty') {
+        const title = (item.title || '').trim().toLowerCase();
+        return title === 'searching…' || title === 'searching...' || title === 'loading' || !title;
+    }
+    return false;
+}
+
+
+
+function hasRenderableBrowseCache(entry) {
+    const view = state.browseViews[browseEntryCacheKey(entry)];
+    if (!view?.items?.length) return false;
+    return view.items.some((item) => !isBrowsePlaceholderItem(item));
+}
+
+
+
+function restoreSearchResultsEntryIfNeeded() {
     const entry = getCurrentBrowseEntry();
+    if (entry.type !== 'shortcut' || entry.key !== 'search' || !state.lastSearchQuery) {
+        return entry;
+    }
+    return ensureSearchResultsEntry();
+}
+
+
+
+async function loadCurrentBrowseView(opts = {}) {
+    restoreSearchResultsEntryIfNeeded();
+    const entry = getCurrentBrowseEntry();
+    const useSearchCache = entry.type === 'search_results'
+        && !opts.forceRefresh
+        && hasRenderableBrowseCache(entry);
+
     state._lastBrowseRenderKey = '';
     browsePanelTitle.textContent = entry.title;
     browsePanelHint.textContent = entry.hint || '';
-    browseList.innerHTML = '';
-    browseList.closest('.media-panel')?.querySelector('.panel-header')?.classList.remove('panel-header-compact');
-    delete browseList.dataset.userScrolled;
-    const loading = document.createElement('div');
-    loading.className = 'panel-divider panel-status';
-    uiH('setPanelStatusText', loading, 'Loading');
-    browseList.appendChild(loading);
+    let loading = null;
+    if (!useSearchCache) {
+        browseList.innerHTML = '';
+        browseList.closest('.media-panel')?.querySelector('.panel-header')?.classList.remove('panel-header-compact');
+        delete browseList.dataset.userScrolled;
+        loading = document.createElement('div');
+        loading.className = 'panel-divider panel-status';
+        uiH('setPanelStatusText', loading, 'Loading');
+        browseList.appendChild(loading);
+    }
 
     try {
         await maClient.ensureReady();
@@ -2955,7 +2995,7 @@ async function loadCurrentBrowseView(opts = {}) {
             }
             await ensureAlphaViewMode(entry);
             isAlphaGrid = entry.alphaViewMode === 'grid';
-            if (isAlphaGrid) {
+            if (isAlphaGrid && loading) {
                 loading.textContent = 'Loading library';
             }
         }
@@ -2992,6 +3032,14 @@ async function loadCurrentBrowseView(opts = {}) {
         } else {
             hideProviderBar();
             hideContainerActionsBar();
+        }
+        if (useSearchCache) {
+            syncBrowseSearchChrome();
+            renderBrowsePanel(true);
+            state.panelFocusIndex = 0;
+            state.browseRowSubFocus = 0;
+            uiH('updatePanelFocus');
+            return;
         }
         if (isBrowsePageable(entry)) {
             storeBrowseView(browseEntryCacheKey(entry), {
@@ -4595,22 +4643,25 @@ function browseBack() {
         state.browseStack.pop();
         state.panelFocusIndex = 0;
         state.browseRowSubFocus = 0;
-        const entry = getCurrentBrowseEntry();
-        const isSearch = entry.type === 'shortcut' && entry.key === 'search';
         if (!isBrowseSearchActive()) state._browseSearchGeneration += 1;
         syncBrowsePanelBack();
-        syncBrowseSearchChrome();
-        state.browseFocusZone = isSearch ? 'input' : 'list';
-        if (entry.type !== 'artist' && state.browseFocusZone === 'artist_providers') {
-            state.browseFocusZone = 'list';
-        }
-        if (!entrySupportsContainerActions(entry) && state.browseFocusZone === 'container_actions') {
-            state.browseFocusZone = 'list';
-        }
         syncSearchInputValue();
-        if (state.browseViews[browseEntryCacheKey(entry)]) {
+        restoreSearchResultsEntryIfNeeded();
+        const backEntry = getCurrentBrowseEntry();
+        const backIsSearchShortcut = backEntry.type === 'shortcut' && backEntry.key === 'search';
+        syncBrowseSearchChrome();
+        state.browseFocusZone = backIsSearchShortcut ? 'input' : 'list';
+        if (backEntry.type !== 'artist' && state.browseFocusZone === 'artist_providers') {
+            state.browseFocusZone = 'list';
+        }
+        if (!entrySupportsContainerActions(backEntry) && state.browseFocusZone === 'container_actions') {
+            state.browseFocusZone = 'list';
+        }
+        const useCache = backEntry.type === 'search_results'
+            ? hasRenderableBrowseCache(backEntry)
+            : !!state.browseViews[browseEntryCacheKey(backEntry)];
+        if (useCache) {
             renderBrowsePanel(true);
-            const backEntry = getCurrentBrowseEntry();
             if (isAlphaListEntry(backEntry)) {
                 renderAlphaViewBar(backEntry);
             } else {
@@ -4632,7 +4683,7 @@ function browseBack() {
             }
             syncAllAndroidChipSections();
             uiH('updatePanelFocus');
-            if (isSearch) browseSearchInput.focus();
+            if (backIsSearchShortcut) browseSearchInput.focus();
         } else {
             loadCurrentBrowseView();
         }

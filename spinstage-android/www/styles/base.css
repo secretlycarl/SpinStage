@@ -61,6 +61,10 @@ body.android .bg-layer.bg-css-blur {
     transition: opacity 1s ease-in-out;
 }
 body.playing #viz-canvas { opacity: 1; }
+body.viz-blur-off #viz-canvas {
+    filter: brightness(1.15) saturate(1.25);
+    -webkit-filter: brightness(1.15) saturate(1.25);
+}
 #bg-vignette {
     position: absolute; inset: 0; z-index: 3;
     background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0.5) 100%);
@@ -79,7 +83,7 @@ body.show-connection #status-bar.connected { opacity: 1; }
 #top-bar {
     position: fixed; top: -100px; right: 40px; z-index: 4000;
     display: flex; gap: 14px; opacity: 0;
-    transition: top 0.335s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    transition: top 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.show-ui:not(.browse-open):not(.queue-open):not(.players-open):not(.details-open):not(.guest-access-open) #top-bar,
 body.menu-open #top-bar,
@@ -1074,13 +1078,25 @@ body.touch-ui .player-sync-delay-btn {
     position: fixed; z-index: 20; left: 50%; top: 50%;
     transform: translate(-50%, -50%);
     display: flex; flex-direction: column; align-items: center;
-    transition: transform 0.3s ease, left 0.3s ease, top 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
-body.show-ui #player-stage {
+body.show-ui:not(.panel-open) #player-stage {
     left: 50% !important;
     top: 50% !important;
     transform: translate(-50%, calc(-50% - 80px)) scale(0.75) !important;
-    transition: transform 0.3s ease, left 0.3s ease, top 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.show-ui-exiting:not(.panel-open):not(.dvd-float):not(.art-corner-info) #player-stage {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.show-ui-exiting #player-stage h1,
 body.show-ui-exiting #player-stage h2,
@@ -1089,11 +1105,21 @@ body.show-ui-exiting #player-stage .cover-wrapper {
     transition: none !important;
 }
 body:not(.show-ui):not(.panel-open):not(.dvd-float):not(.art-corner-info) #player-stage {
-    transition: transform 0.3s ease, left 0.3s ease, top 0.3s ease;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.dvd-float #player-stage {
     transition: none;
     will-change: transform;
+}
+body.show-ui:not(.panel-open) #player-stage.stage-handoff {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 body.panel-open #player-stage {
     left: 20% !important;
@@ -1135,7 +1161,11 @@ body.show-ui:not(.panel-open) .info {
     border-radius: 20px; overflow: hidden;
     box-shadow: 0 40px 75px rgba(0,0,0,0.6);
     border: 1px solid rgba(255,255,255,0.1);
-    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    transition: box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.show-ui #player-stage .cover-wrapper,
 body:not(.show-ui):not(.art-corner-info) .cover-wrapper {
@@ -1183,7 +1213,10 @@ h1, h2 { transition: opacity 0.2s ease; }
     font-size: 3.6rem; margin: 0; font-weight: 400; letter-spacing: -1px;
     line-height: 1.1; width: 100%; max-width: 100%; overflow: visible;
     display: flex; justify-content: center;
-    transition: opacity 0.2s ease, font-size 0.15s ease;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1), font-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.show-ui #player-stage h1 {
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .np-marquee-viewport {
     display: block;
@@ -1225,6 +1258,11 @@ body.art-corner-info:not(.show-ui) .np-marquee-viewport.np-title-wrap .np-marque
     font-weight: 300; width: 100%; max-width: 100%;
     overflow: visible;
     display: flex; justify-content: center;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        font-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.show-ui #player-stage h2 {
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 #album-line {
     display: none;
@@ -1351,11 +1389,6 @@ body.web-ui.cursor-hidden * {
     cursor: none !important;
 }
 body.show-ui .progress-wrapper { opacity: 1; transform: translateX(-50%) translateY(0); }
-body.show-ui.stack-layout-pending .progress-wrapper {
-    opacity: 0 !important;
-    transform: translateX(-50%) translateY(var(--playback-chrome-enter-y, 248px)) !important;
-    pointer-events: none;
-}
 body.show-ui:not(.panel-open) .progress-wrapper { pointer-events: auto; }
 body.show-ui:not(.progress-seekable) .progress-wrapper {
     opacity: 0; visibility: hidden; pointer-events: none;
@@ -1560,6 +1593,10 @@ body.lyrics-synced .lyrics-line:not(.active) {
 body.show-ui:not(.panel-open) #controls-container {
     top: var(--controls-stack-top, auto);
     bottom: auto;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.show-ui:not(.panel-open) #controls-container {
+    transform: translateY(0);
 }
 #controls-container::before {
     content: '';
@@ -1604,22 +1641,13 @@ body.android.touch-ui #controls-container::before { display: none; }
 body:not(.show-ui) #controls-vignette {
     display: none;
 }
-body.show-ui:not(.panel-open):not(.stack-layout-pending) #controls-vignette {
+body.show-ui:not(.panel-open) #controls-vignette {
     visibility: visible;
     opacity: 1;
 }
 body.touch-ui #controls-vignette {
     height: min(38vh, 280px);
     min-height: 160px;
-}
-body.show-ui.stack-layout-pending:not(.panel-open) #controls-container {
-    transform: translateY(calc(100% + 48px)) !important;
-    visibility: hidden;
-}
-body.show-ui.stack-layout-pending #controls-vignette {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none;
 }
 #controls-container .btn { pointer-events: auto; }
 .btn { 

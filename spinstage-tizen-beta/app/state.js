@@ -160,6 +160,7 @@ export const state = {
   containerActionQueuedState: new Map(),
   localSyncLeaderId: '',
   lastLocalSyncStateKey: '',
+  tvLibraryBootstrapped: false,
   lastLocalPlayerMediaKey: '',
   localVisualCatchupTimer: null,
   browseStack: [{ key: 'root', title: 'Browse', type: 'root' }],
