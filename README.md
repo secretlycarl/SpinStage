@@ -62,8 +62,13 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
 
 ## Screenshots
 
-![Screenshots1](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png)
-![Screenshots2](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png)
+<details>
+  <summary>1</summary>
+  <br>
+  ![Screenshots1](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png)
+  ![Screenshots2](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png)
+</details>
+
 ---
 
 ## Before you start (all platforms)
