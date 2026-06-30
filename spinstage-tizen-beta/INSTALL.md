@@ -9,7 +9,7 @@ This guide covers **sideloading your own signed build** on a developer-mode TV. 
 | Item | Notes |
 |------|--------|
 | **Samsung TV** | Same LAN as your PC. Note its **IP address**. |
-| **Windows PC** | Build/sign/install flow is documented for Windows + Tizen Studio (macOS/Linux possible but less common). Note your PC’s IP if the TV asks to allow a host. |
+| **Windows PC** | Build/sign/install flow is documented for Windows + Tizen Studio (macOS/Linux untested). Note your PC’s IP to enter later in the Tizen Dev Mode popup. |
 | **Music Assistant** | Same as other platforms — MA running, Sendspin on, MA login. See [README](../README.md#before-you-start-all-platforms). |
 
 Official references (read these if anything drifts):
