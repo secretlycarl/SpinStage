@@ -63,10 +63,10 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
 ## Screenshots
 
 <details>
-  <summary>1</summary>
+  <summary>View Screenshots</summary>
   <br>
-  ![Screenshots1](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png)
-  ![Screenshots2](https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png)
+  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="500">
+  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="500">
 </details>
 
 ---
