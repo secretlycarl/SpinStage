@@ -5,7 +5,7 @@
 
 Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, LG webOS, and Samsung Tizen (beta). Demo video will be added soon, screenshots below.
 
-I've had an idea for a cross-platform music player/visualizer (particularly TV) for a while but I could never find anything that scratched my itch. Of course there's Milkdrop, a ton of audio-reactive Wallpaper Engine wallpapers, and many others. I always wondered why more music apps don't have them. As I was setting up Music Assistant I came across [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) and it was the perfect framework for my idea, so I (Cursor) got to work.
+I've had an idea for a cross-platform music player/visualizer (particularly TV) for a while but I could never find anything that scratched my itch. Of course there's Milkdrop, a ton of audio-reactive Wallpaper Engine wallpapers, and many others, but I always wondered why more music apps don't have them integrated. As I was setting up Music Assistant I came across [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) and it was the perfect framework for my idea, so I (Cursor) got to work.
 
 > **Unofficial client.** SpinStage is a third-party app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
 
