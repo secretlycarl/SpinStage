@@ -106,8 +106,6 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
   <img src="docs/screenshots/android.png" width="1000">
 </details>
 
----
-
 ## Before you start (all platforms)
 
 1. [Music Assistant](https://music-assistant.io/) running
@@ -308,8 +306,6 @@ Or env vars: `SPINSTAGE_SERVER`, `SPINSTAGE_PLAYER`, `SPINSTAGE_USERNAME`, `SPIN
 Build-time prefill skips the setup wizard on first launch. After Connect, credentials are saved on-device (see [Security](#security)) so restarts stay signed in.
 
 **Don't commit or share `user-settings.json`.**
-
----
 
 ## Remote access
 
