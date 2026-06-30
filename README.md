@@ -65,43 +65,42 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
 <details>
   <summary>1</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/Screenshot%202026-06-29%20211415.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/Screenshot%202026-06-29%20211019.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211019.png" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211104.png" width="1000">
 </details>
 
 <details>
   <summary>2</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211222.png" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211341.png" width="1000">
 </details>
 
 <details>
   <summary>3</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211415.png" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211500.png" width="1000">
 </details>
 
 <details>
   <summary>4</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211614.png" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20211739.png" width="1000">
 </details>
 
 <details>
   <summary>5</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20212910.png" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20213156.png" width="1000">
 </details>
 
 <details>
   <summary>6</summary>
   <br>
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots1.png?raw=true" width="1000">
-  <img src="https://github.com/secretlycarl/SpinStage/blob/main/docs/screenshots/spinstageshots2.png?raw=true" width="1000">
+  <img src="docs/screenshots/Screenshot%202026-06-29%20213326.png" width="1000">
 </details>
 
 ---
