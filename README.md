@@ -106,6 +106,15 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
   <img src="docs/screenshots/android.png" width="1000">
 </details>
 
+## v1.1.0 Changes
+- Added Docker setup instructions and example compose
+- Device sync behavior tweaks
+- Tizen beta version and setup docs
+- Misc android UI tweaks
+- Improved transition of now playing accent/bg art change on new media
+
+see full list at...
+
 ## Before you start (all platforms)
 
 1. [Music Assistant](https://music-assistant.io/) running
