@@ -172,6 +172,8 @@ import {
   DOCUMENT_TITLE_MAX_LEN,
   IS_CAPACITOR,
   IS_ANDROID,
+  IS_TIZEN,
+  IS_TV_REMOTE,
   IS_WEBOS,
   HAS_TOUCH_HARDWARE,
   ART_URL_CACHE_MAX,
@@ -710,6 +712,7 @@ applyUiScalingClasses();
         refreshTitleLayout();
     }));
 if (IS_WEBOS) mainBody.classList.add('webos-tv');
+if (IS_TIZEN) mainBody.classList.add('tizen-tv');
 if (IS_ANDROID) mainBody.classList.add('android');
 
 async function applyBuildDefaultsIfNeeded() {
@@ -859,6 +862,7 @@ function estimateControlsVisualBand() {
     const landscape = window.matchMedia('(orientation: landscape)').matches;
     const isWebLandscape = mainBody.classList.contains('web-ui') && landscape;
     const isWebosLandscape = mainBody.classList.contains('webos-tv') && landscape;
+    const isTizenLandscape = mainBody.classList.contains('tizen-tv') && landscape;
     if (mainBody.classList.contains('android') && usesPhoneTypography()) {
         const androidPlayH = 54;
         const paddingTop = 10;
@@ -871,7 +875,7 @@ function estimateControlsVisualBand() {
             bandHeight,
         };
     }
-    if (isWebLandscape || isWebosLandscape) {
+    if (isWebLandscape || isWebosLandscape || isTizenLandscape) {
         const containerH = 150;
         const topInset = Math.round((containerH - playH) / 2);
         return { topInset, visualHeight: playH, bottomInset: containerH - topInset - playH, bandHeight: containerH };
@@ -1195,6 +1199,11 @@ function pickDisplayTitle(maMedia, queueItem, spinMeta) {
     const mt = inferMediaType(maMedia) || inferMediaType(spinMeta)
         || inferMediaType(queueItem?.media_item) || 'track';
     if (mt === 'track') {
+        if (spinMeta && isSendspinMetadataStale(spinMeta)) {
+            const artist = getTrackArtistName(maMedia, spinMeta, queueItem);
+            const spinClean = stripArtistPrefixFromTitle(spinMeta?.title || '', artist);
+            if (spinClean) return spinClean;
+        }
         const artist = getTrackArtistName(maMedia, spinMeta, queueItem);
         const merged = mergeTrackDisplayTitle(maMedia, spinMeta?.title, artist);
         if (merged) return merged;
@@ -1698,6 +1707,30 @@ function normalizeForMatch(text) {
         .trim();
 }
 
+function isSameArtistName(a, b) {
+    const na = normalizeForMatch(cleanArtistDisplayName(a));
+    const nb = normalizeForMatch(cleanArtistDisplayName(b));
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    const stripLeadingThe = (s) => s.replace(/^the\s+/, '').trim();
+    return stripLeadingThe(na) === stripLeadingThe(nb);
+}
+
+function albumMatchesBrowseArtist(album, artistName) {
+    if (!album || !artistName) return false;
+    const names = [];
+    if (album.artist) names.push(album.artist);
+    for (const a of album.artists || []) {
+        if (a?.name) names.push(a.name);
+    }
+    if (!names.length) return false;
+    return names.some((n) => isSameArtistName(n, artistName));
+}
+
+function providerNeedsStrictArtistDiscography(provider) {
+    return providerIconDomain(provider) === 'internet_archive';
+}
+
 function namesMatchForArtist(a, b) {
     const na = normalizeForMatch(cleanArtistDisplayName(a));
     const nb = normalizeForMatch(cleanArtistDisplayName(b));
@@ -1792,6 +1825,10 @@ function uriForProvider(item, preferredProvider) {
     const uri = item.uri || item.path || '';
     if (!preferredProvider) return uri;
     const pref = normalizeProviderId(preferredProvider);
+    if (isSpotifyProvider(pref)) {
+        const fromMapping = spotifyUriFromMappings(item, pref);
+        if (fromMapping) return fromMapping;
+    }
     if (isLibraryLikeProvider(pref)) {
         if (isLibraryLikeProvider(itemStoredProviderId(item))) return uri;
         const fromUri = providerFromUri(uri);
@@ -1802,6 +1839,22 @@ function uriForProvider(item, preferredProvider) {
     if (spotifyProviderIdsMatch(pref, prov) || normalizeProviderId(prov) === pref) return uri;
     if (spotifyProviderIdsMatch(pref, itemStoredProviderId(item))) return uri;
     return uri;
+}
+
+function spotifyUriFromMappings(item, preferredProvider) {
+    if (!item || !preferredProvider || !isSpotifyProvider(preferredProvider)) return '';
+    const spotifyIds = getSpotifyProviderIds();
+    for (const mapping of item.provider_mappings || []) {
+        const raw = mappingProviderRaw(mapping);
+        if (!isSpotifyProvider(raw)) continue;
+        if (!spotifyIds.some((pid) => spotifyProviderIdsMatch(pid, raw))) continue;
+        const url = String(mapping.url || '');
+        const urlMatch = url.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/i);
+        if (urlMatch) return `spotify://track:${urlMatch[1]}`;
+        const itemId = mapping.item_id;
+        if (itemId && !String(itemId).includes('/')) return `spotify://track:${itemId}`;
+    }
+    return '';
 }
 
 function isBuiltinMaProvider(providerId) {
@@ -1822,33 +1875,221 @@ function browseChipOverridesProvider(entry, item) {
     return true;
 }
 
-function trackMatchesPreferredProvider(track, preferredProvider) {
+function trackPositionNumber(track) {
+    return Number(track?.track_number ?? track?.track ?? 0) || 0;
+}
+
+function levenshtein(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 0; i < a.length; i += 1) {
+        const cur = [i + 1];
+        for (let j = 0; j < b.length; j += 1) {
+            const cost = a[i] === b[j] ? 0 : 1;
+            cur[j + 1] = Math.min(cur[j] + 1, prev[j + 1] + 1, prev[j] + cost);
+        }
+        prev = cur;
+    }
+    return prev[b.length];
+}
+
+function trackTitlesMatchForVariant(a, b) {
+    if (!a || !b) return false;
+    if (titlesRoughlyMatch(a, b)) return true;
+    const na = normalizeForMatch(a);
+    const nb = normalizeForMatch(b);
+    if (!na || !nb) return false;
+    const len = Math.max(na.length, nb.length);
+    if (len < 5) return false;
+    return levenshtein(na, nb) <= Math.max(2, Math.floor(len * 0.2));
+}
+
+function tracksAreSameAlbumSlot(a, b) {
+    if (!a || !b) return false;
+    const posA = trackPositionNumber(a);
+    const posB = trackPositionNumber(b);
+    if (!posA || !posB || posA !== posB) return false;
+    return trackTitlesMatchForVariant(a.name, b.name);
+}
+
+function normalizeTrackMatchKey(track) {
+    if (!track || track.name === '..') return '';
+    const title = String(track.name || '').trim().toLowerCase();
+    if (!title) return '';
+    const num = Number(track.track_number ?? track.track ?? 0) || 0;
+    return `${num}:${title}`;
+}
+
+function albumHasLocalTrackVariant(allTracks, track) {
+    if (!Array.isArray(allTracks) || !track) return false;
+    return allTracks.some((t) => t !== track && isLocalLibraryItem(t)
+        && tracksAreSameAlbumSlot(t, track));
+}
+
+function mappingProviderRaw(mapping) {
+    return mapping?.provider_instance || mapping?.provider_instance_id
+        || mapping?.provider_domain || mapping?.provider || '';
+}
+
+function mappingIsFilesystem(mapping) {
+    const dom = normalizeProviderId(mappingProviderRaw(mapping)).split('--')[0].toLowerCase();
+    return dom.startsWith('filesystem');
+}
+
+function mappingIsSpotify(mapping) {
+    return isSpotifyProvider(mappingProviderRaw(mapping));
+}
+
+function trackHasFilesystemMapping(track) {
+    const mappings = track?.provider_mappings;
+    if (!Array.isArray(mappings) || !mappings.length) return false;
+    return mappings.some(mappingIsFilesystem);
+}
+
+function trackHasAnySpotifyMapping(track) {
+    const mappings = track?.provider_mappings;
+    if (!Array.isArray(mappings) || !mappings.length) return false;
+    return mappings.some(mappingIsSpotify);
+}
+
+function isSpotifyOnlyLibraryTrack(track) {
+    return trackHasSpotifyLibraryMapping(track) && !trackHasFilesystemMapping(track);
+}
+
+function trackHasSpotifyLibraryMapping(track) {
+    return itemHasSpotifyInLibraryMapping(track, getSpotifyProviderIds());
+}
+
+function albumHasSpotifyOnlyTrackVariant(allTracks, track) {
+    if (!Array.isArray(allTracks) || !track) return false;
+    return allTracks.some((t) => t !== track && isSpotifyOnlyLibraryTrack(t)
+        && tracksAreSameAlbumSlot(t, track));
+}
+
+function trackMatchesPreferredProvider(track, preferredProvider, allTracks = null) {
     if (!track || !preferredProvider) return true;
     const pref = normalizeProviderId(preferredProvider);
     const uri = track.uri || track.path || '';
     if (isLibraryLikeProvider(pref)) {
-        // "Library" = anything in the MA library (including Spotify-synced
-        // saved items), to match the displayed library discography which
-        // is fetched with the server's in_library_only filter.
-        return isInMaLibrary(track);
+        // Prefer local files; keep Spotify-synced copies only when no local
+        // file exists for the same track (MA often returns both as disc 0/1).
+        if (isLocalLibraryItem(track)) return true;
+        if (isSpotifySyncedLibraryItem(track)) {
+            return !allTracks || !albumHasLocalTrackVariant(allTracks, track);
+        }
+        return false;
     }
     if (isSpotifyProvider(pref)) {
         if (/^spotify:/i.test(uri)) return true;
+        if (providerFromUri(uri) === 'spotify') return true;
+        const hasFs = trackHasFilesystemMapping(track);
+        const hasSpot = trackHasAnySpotifyMapping(track);
+        // Filesystem-primary rows (e.g. Oxygen, local-only disc 0 tracks).
+        if (hasFs && !hasSpot) return false;
+        // Spotify-only saved rows (disc 1).
+        if (!hasFs && hasSpot) return true;
+        // Dual-mapped: keep only when no spotify-only sibling for this slot.
+        if (hasFs && hasSpot) {
+            return !(allTracks && albumHasSpotifyOnlyTrackVariant(allTracks, track));
+        }
+        if (isLocalLibraryItem(track)) return false;
+        const prov = itemProviderId(track) || itemStoredProviderId(track) || providerFromUri(uri);
+        if (spotifyProviderIdsMatch(pref, prov) || normalizeProviderId(prov) === pref) return true;
         if (isSpotifySyncedLibraryItem(track)) return true;
+        return false;
     }
     const prov = itemProviderId(track) || itemStoredProviderId(track) || providerFromUri(uri);
     if (spotifyProviderIdsMatch(pref, prov) || normalizeProviderId(prov) === pref) return true;
-    if (isSpotifyProvider(pref) && providerFromUri(uri) === 'spotify') return true;
     return false;
+}
+
+function normalizeTrackDedupeKey(track) {
+    return normalizeTrackMatchKey(track);
+}
+
+function shouldPreferAlbumTrackVariant(candidate, incumbent, preferredProvider) {
+    const pref = preferredProvider ? normalizeProviderId(preferredProvider) : null;
+    const cMatch = pref && trackMatchesPreferredProvider(candidate, pref, null);
+    const iMatch = pref && trackMatchesPreferredProvider(incumbent, pref, null);
+    if (cMatch && !iMatch) return true;
+    if (!cMatch && iMatch) return false;
+    if (pref && isSpotifyProvider(pref)) {
+        const cSpotOnly = isSpotifyOnlyLibraryTrack(candidate);
+        const iSpotOnly = isSpotifyOnlyLibraryTrack(incumbent);
+        if (cSpotOnly && !iSpotOnly) return true;
+        if (!cSpotOnly && iSpotOnly) return false;
+    }
+    const cLocal = isLocalLibraryItem(candidate);
+    const iLocal = isLocalLibraryItem(incumbent);
+    if (cLocal && !iLocal) return true;
+    if (!cLocal && iLocal) return false;
+    return false;
+}
+
+function dedupeAlbumTrackVariants(tracks, preferredProvider) {
+    if (!Array.isArray(tracks) || tracks.length < 2) return tracks || [];
+    const byKey = new Map();
+    const order = [];
+    for (const track of tracks) {
+        if (!track || track.name === '..') continue;
+        let key = normalizeTrackDedupeKey(track);
+        if (key) {
+            for (const existingKey of order) {
+                const existing = byKey.get(existingKey);
+                if (existing && tracksAreSameAlbumSlot(existing, track)) {
+                    key = existingKey;
+                    break;
+                }
+            }
+        }
+        if (!key) key = String(track.uri || track.path || track.item_id || '');
+        if (!key) continue;
+        if (!byKey.has(key)) {
+            byKey.set(key, track);
+            order.push(key);
+            continue;
+        }
+        if (shouldPreferAlbumTrackVariant(track, byKey.get(key), preferredProvider)) {
+            byKey.set(key, track);
+        }
+    }
+    return order.map((k) => byKey.get(k));
+}
+
+function sortAlbumTracksInAlbumOrder(tracks, preferredProvider = null) {
+    const spotifyOrder = preferredProvider && isSpotifyProvider(normalizeProviderId(preferredProvider));
+    return [...tracks].sort((a, b) => {
+        if (!spotifyOrder) {
+            const da = Number(a.disc_number ?? a.disc ?? 0) || 0;
+            const db = Number(b.disc_number ?? b.disc ?? 0) || 0;
+            if (da !== db) return da - db;
+        }
+        const ta = Number(a.track_number ?? a.track ?? 0) || 0;
+        const tb = Number(b.track_number ?? b.track ?? 0) || 0;
+        if (ta !== tb) return ta - tb;
+        return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+    });
+}
+
+function filterAlbumTracksForProvider(tracks, preferredProvider) {
+    if (!Array.isArray(tracks)) return [];
+    let out = tracks;
+    if (preferredProvider) {
+        out = out.filter((t) => trackMatchesPreferredProvider(t, preferredProvider, tracks));
+    }
+    out = dedupeAlbumTrackVariants(out, preferredProvider);
+    return sortAlbumTracksInAlbumOrder(out, preferredProvider);
 }
 
 async function collectProviderTrackUris(tracks, preferredProvider, providerOpts = {}) {
     if (!Array.isArray(tracks) || !tracks.length) return [];
     const pref = preferredProvider || providerOpts?.preferredProvider || null;
+    const filtered = filterAlbumTracksForProvider(tracks, pref);
     const uris = [];
-    for (const track of tracks) {
+    for (const track of filtered) {
         if (!track || track.name === '..') continue;
-        if (pref && !trackMatchesPreferredProvider(track, pref)) continue;
         let uri = uriForProvider(track, pref);
         if (!uri && pref) {
             try {
@@ -2765,12 +3006,16 @@ function formatMetadataSubtitle(m, maMediaItem) {
         if (fromSpin) return fromSpin;
         return state.lastPodcastShowSubtitle || '';
     }
+    if (m && isSendspinMetadataStale(m)) {
+        return pickDisplayArtistName(m) || pickDisplayArtistName(maMediaItem);
+    }
     return pickDisplayArtistName(maMediaItem) || pickDisplayArtistName(m);
 }
 
 function scheduleMaQueueCatchup() {
     clearTimeout(state.maCatchupTimer);
-    state.maCatchupTimer = setTimeout(async () => {
+    const runCatchup = async (attempt = 0) => {
+        state.maCatchupTimer = null;
         const prev = maClient.activeQueue?.current_item?.queue_item_id;
         try {
             await maClient.refreshActiveQueue();
@@ -2778,7 +3023,11 @@ function scheduleMaQueueCatchup() {
             console.warn('MA queue catchup failed:', err);
         }
         syncMaNowPlayingIfChanged(prev);
-    }, 120);
+        if (attempt === 0 && isSendspinMetadataStale(state.lastSendspinMetadata)) {
+            state.maCatchupTimer = setTimeout(() => runCatchup(1), 400);
+        }
+    };
+    state.maCatchupTimer = setTimeout(() => runCatchup(0), 120);
 }
 
 async function recoverMaPlayback() {
@@ -3682,7 +3931,7 @@ function syncIdleProgressVisibility() {
     idleProgressEl.style.removeProperty('opacity');
     idleProgressEl.style.removeProperty('display');
     idleProgressEl.style.removeProperty('visibility');
-    if (IS_WEBOS && show) {
+    if (IS_TV_REMOTE && show) {
         const reapply = () => {
             if (_lastIdleProgressShow !== true) return;
             idleProgressEl.classList.remove('hide-for-controls');
@@ -3692,7 +3941,7 @@ function syncIdleProgressVisibility() {
             reapply();
             requestAnimationFrame(reapply);
         });
-    } else if (IS_WEBOS && !show && wasShowing) {
+    } else if (IS_TV_REMOTE && !show && wasShowing) {
         idleProgressEl.classList.add('hide-for-controls');
         idleProgressEl.setAttribute('aria-hidden', 'true');
     }
@@ -3701,7 +3950,7 @@ function syncIdleProgressVisibility() {
 let _idleProgressSyncTimer = null;
 
 function scheduleIdleProgressVisibilitySync() {
-    if (!IS_WEBOS) {
+    if (!IS_TV_REMOTE) {
         invalidateIdleProgressVisibility();
         syncIdleProgressVisibility();
         return;
@@ -3828,6 +4077,14 @@ function ensureMaConnection() {
 function exitApp() {
     if (typeof webOS !== 'undefined' && typeof webOS.platformBack === 'function') {
         webOS.platformBack();
+        return;
+    }
+    if (IS_TIZEN && typeof tizen !== 'undefined' && tizen.application?.getCurrentApplication) {
+        try {
+            tizen.application.getCurrentApplication().exit();
+        } catch (_) {
+            window.close();
+        }
         return;
     }
     window.close();
@@ -4174,8 +4431,6 @@ function bindProgressScrubbing() {
 }
 
 
-syncSettingsMenuChecks();
-
 function resumeSendspinAudioOutput() {
     const player = window.playerInstance;
     const ap = player?.audioProcessor;
@@ -4190,6 +4445,41 @@ function resumeSendspinAudioOutput() {
         void ap.audioElement.play().catch((err) => {
             console.warn('media-element resume failed:', err);
         });
+    }
+}
+
+/** Tizen TV WebView often leaves AudioContext suspended across stream restarts. */
+function kickTizenAudioOutput() {
+    if (!IS_TIZEN) return;
+    const player = window.playerInstance;
+    const ap = player?.audioProcessor;
+    if (!player || !ap) return;
+    resumeSendspinAudioOutput();
+    void ap.resumeAudioContext?.();
+}
+
+function scheduleTizenAudioKick(reason = 'stream-start') {
+    if (!IS_TIZEN) return;
+    kickTizenAudioOutput();
+    for (const ms of [50, 200, 600, 1500]) {
+        window.setTimeout(() => kickTizenAudioOutput(), ms);
+    }
+    if (reason === 'stream-start') {
+        window.setTimeout(() => {
+            const player = window.playerInstance;
+            const ap = player?.audioProcessor;
+            const ctx = player?.audioContext;
+            if (!player || !ap || !ctx || ctx.state !== 'running') return;
+            const ahead = ap.getScheduledAheadSec?.(ctx.currentTime ?? 0) ?? 0;
+            const queued = (ap.audioBufferQueue?.length ?? 0) + (ap.scheduledSources?.length ?? 0);
+            if (queued > 0 && ahead < 0.05) {
+                try {
+                    player.forcePlaybackResync();
+                } catch (err) {
+                    console.warn('Tizen stream-start resync failed:', err);
+                }
+            }
+        }, 900);
     }
 }
 
@@ -4224,7 +4514,7 @@ function checkSendspinAudioHealth() {
         return;
     }
     state.audioHealthEmptyStreak = (state.audioHealthEmptyStreak ?? 0) + 1;
-    const emptyThreshold = IS_WEBOS ? 5 : 3;
+    const emptyThreshold = IS_TIZEN ? 3 : (IS_TV_REMOTE ? 5 : 3);
     if (state.audioHealthEmptyStreak < emptyThreshold) return;
     state.audioHealthEmptyStreak = 0;
     console.warn('Sendspin audio health: playing but no scheduled audio — resyncing');
@@ -4240,7 +4530,8 @@ let audioHealthTimer = null;
 
 function startAudioHealthWatchdog() {
     clearInterval(audioHealthTimer);
-    audioHealthTimer = setInterval(checkSendspinAudioHealth, AUDIO_HEALTH_CHECK_MS);
+    const intervalMs = IS_TIZEN ? 4000 : AUDIO_HEALTH_CHECK_MS;
+    audioHealthTimer = setInterval(checkSendspinAudioHealth, intervalMs);
 }
 
 function bindAudioLifecycleRecovery() {
@@ -4345,7 +4636,7 @@ async function init() {
     const savedName = localStorage.getItem('ma_player_name');
 
     const baseUrl = buildBaseUrl(savedAddress);
-    const platform = IS_ANDROID ? 'android' : IS_WEBOS ? 'webos' : 'browser';
+    const platform = IS_ANDROID ? 'android' : IS_TIZEN ? 'tizen' : IS_WEBOS ? 'webos' : 'browser';
     const safePlayerId = buildSendspinPlayerId(savedName, platform);
 
     setStatus(`connecting ${describeConnection(savedAddress)}…`);
@@ -4375,6 +4666,7 @@ async function init() {
             syncProgressOnStreamStart(gen);
             scheduleMaQueueCatchup();
             schedulePlaybackJoinRecovery('stream-start');
+            scheduleTizenAudioKick('stream-start');
         },
         onStateChange: (playerState) => {
             if (playerState.serverState?.metadata) {
@@ -4509,6 +4801,7 @@ async function init() {
                         anchorProgress(resume.positionMs, resume.playbackSpeed);
                         state.progressResyncAt = performance.now();
                         requestNowPlayingVisuals('play-start');
+                        kickTizenAudioOutput();
                     }
                 } else if (wasPlaying) {
                     const playbackState = playerState.groupState.playback_state;
@@ -4538,6 +4831,7 @@ async function init() {
         void initAndroidMediaSession();
         bindAudioLifecycleRecovery();
         startAudioHealthWatchdog();
+        kickTizenAudioOutput();
     } catch (err) {
         clearInterval(analyserPoll);
         stopMaModeSync();
@@ -4799,6 +5093,16 @@ if (IS_ANDROID && window.Capacitor?.Plugins?.App) {
     });
 }
 
+if (IS_TIZEN && typeof tizen !== 'undefined' && tizen.tvinputdevice?.registerKey) {
+    for (const key of ['Back', 'MediaPlay', 'MediaPause', 'MediaPlayPause', 'MediaStop']) {
+        try {
+            tizen.tvinputdevice.registerKey(key);
+        } catch (_) {
+            /* unsupported on this model */
+        }
+    }
+}
+
 window.addEventListener('keyup', (e) => {
     const code = e.keyCode || e.which;
     if (code === 37 || code === 39) onRemoteSeekRelease();
@@ -4956,6 +5260,9 @@ registerUiHandlers({
     shouldShowArtistItem,
     itemMatchesBrowseProvider,
     filterAlbumTracks,
+    filterAlbumTracksForProvider,
+    albumMatchesBrowseArtist,
+    providerNeedsStrictArtistDiscography,
     uriForProvider,
     providerOptsForPreferred,
     isRadioBrowseItem,
@@ -5212,6 +5519,9 @@ registerMaHandlers({
     isRadioBrowseFolder,
     dedupeRadioItems,
     filterAlbumTracks,
+    filterAlbumTracksForProvider,
+    albumMatchesBrowseArtist,
+    providerNeedsStrictArtistDiscography,
     uriForProvider,
     providerOptsForPreferred,
     isValidMaItemId,

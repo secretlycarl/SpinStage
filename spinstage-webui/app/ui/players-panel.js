@@ -702,11 +702,37 @@ function getActiveOutputProtocolId(playerId) {
 
 
 
+function isCastSendspinPlayer(playerId) {
+    const player = state.playersListCache.find((p) => p.player_id === playerId);
+    return playerProviderDomain(player) === 'chromecast';
+}
+
+
+
 function getPlayerConfigCandidateIds(playerId) {
     const ids = [playerId];
     const protocol = getActiveOutputProtocolId(playerId);
     if (protocol) ids.push(protocol);
-    return [...new Set(ids.filter(Boolean))];
+    const unique = [...new Set(ids.filter(Boolean))];
+    // Cast static delay lives on the Sendspin bridge (spb_*) protocol player.
+    if (protocol && isCastSendspinPlayer(playerId)) {
+        return [protocol, ...unique.filter((id) => id !== protocol)];
+    }
+    return unique;
+}
+
+
+
+/** MA Cast bridge only applies sendspin_static_delay (not group trim). */
+function normalizeCastPlaybackOffsets(playerId, staticMs, trimMs) {
+    if (!isCastSendspinPlayer(playerId)) {
+        return { staticMs: clampStaticDelayMs(staticMs), trimMs: clampGroupTrimMs(trimMs) };
+    }
+    const net = netGroupOffsetMs(staticMs, trimMs);
+    return {
+        staticMs: clampStaticDelayMs(Math.max(0, -net)),
+        trimMs: 0,
+    };
 }
 
 
@@ -947,16 +973,20 @@ async function persistPlayerGroupTrim(playerId, groupTrimMs) {
 
 
 async function persistPlayerPlaybackOffsetsConfig(playerId, staticDelayMs, groupTrimMs) {
-    const staticMs = clampStaticDelayMs(staticDelayMs);
-    const trimMs = clampGroupTrimMs(groupTrimMs);
-    const delayKey = await resolvePlayerSyncDelayKey(playerId);
-    await maClient.send('config/players/save', {
-        player_id: playerId,
-        values: {
-            [delayKey]: staticMs,
-            [GROUP_TRIM_CONFIG_KEY]: trimMs,
-        },
-    });
+    const normalized = normalizeCastPlaybackOffsets(playerId, staticDelayMs, groupTrimMs);
+    const staticMs = normalized.staticMs;
+    const trimMs = normalized.trimMs;
+    const targetIds = getPlayerConfigCandidateIds(playerId);
+    await Promise.all(targetIds.map(async (targetId) => {
+        const delayKey = await resolvePlayerSyncDelayKey(targetId);
+        await maClient.send('config/players/save', {
+            player_id: targetId,
+            values: {
+                [delayKey]: staticMs,
+                [GROUP_TRIM_CONFIG_KEY]: trimMs,
+            },
+        });
+    }));
     state.playerSyncDelayCache.set(playerId, staticMs);
     state.playerGroupTrimCache.set(playerId, trimMs);
     return { staticMs, trimMs };
@@ -1001,7 +1031,11 @@ async function persistPlayerStaticDelay(playerId, staticDelayMs) {
 
 
 function markPlayerOffsetSaveSettle(playerId) {
-    playerOffsetSaveSettleUntil.set(playerId, Date.now() + PLAYER_OFFSET_SAVE_SETTLE_MS);
+    const until = Date.now() + PLAYER_OFFSET_SAVE_SETTLE_MS;
+    playerOffsetSaveSettleUntil.set(playerId, until);
+    for (const id of getPlayerConfigCandidateIds(playerId)) {
+        playerOffsetSaveSettleUntil.set(id, until);
+    }
 }
 
 
@@ -1035,6 +1069,11 @@ async function savePlayerStaticDelay(playerId, staticDelayMs) {
 function invalidatePlayerSyncDelayCache(playerIds) {
     for (const id of playerIds || []) {
         if (!id) continue;
+        for (const cacheId of getPlayerConfigCandidateIds(id)) {
+            state.playerSyncDelayCache.delete(cacheId);
+            state.playerGroupTrimCache.delete(cacheId);
+            state.playerSyncDelayConfigKeyCache.delete(cacheId);
+        }
         state.playerSyncDelayCache.delete(id);
         state.playerGroupTrimCache.delete(id);
         state.playerSyncDelayConfigKeyCache.delete(id);
@@ -1436,7 +1475,8 @@ async function adjustPlayerSyncDelayInner(playerId, deltaMs) {
     const currentTrim = state.playerGroupTrimCache.has(playerId)
         ? state.playerGroupTrimCache.get(playerId)
         : (await readPlayerGroupTrimMs(playerId, { bypassCache: true }));
-    const next = applyGroupOffsetDelta(currentStatic, currentTrim, deltaMs);
+    let next = applyGroupOffsetDelta(currentStatic, currentTrim, deltaMs);
+    next = normalizeCastPlaybackOffsets(playerId, next.staticMs, next.trimMs);
     const name = playerDisplayName(playerId);
     if (playerId === maClient.playerId) {
         applyLocalPlaybackOffsets(next.staticMs, next.trimMs);
@@ -2816,6 +2856,8 @@ async function refreshActiveSyncGroup() {
         syncProgressFromMaQueue(true);
         if (state.queuePanelOpen) loadQueueItems(true);
         uiH('scheduleLocalPlayerVisualCatchup', 'refresh-sync');
+        invalidatePlayerSyncDelayCache(group.allIds);
+        await loadGroupSyncDelays(group.allIds);
 
         if (aligned) {
             playersPanelHint.textContent = `${names} · playback realigned`;

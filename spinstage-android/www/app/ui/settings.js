@@ -12,7 +12,7 @@ import {
     BASS_MODE_PRESET_NAME,
     SCREENSAVER_CLIENT,
     IS_ANDROID,
-    IS_WEBOS,
+    IS_TV_REMOTE,
 } from '../constants.js';
 import { isBrowserUi } from '../platform.js';
 import { getDefaultPlayerName } from '../util/server.js';
@@ -65,6 +65,7 @@ import {
     getShowLyricsEnabled as readShowLyricsPref,
     setShowLyricsEnabled as applyShowLyricsPref,
 } from '../playback/lyrics-panel.js';
+import { isNowPlayingRadio } from '../playback/now-playing.js';
 import { maClient } from '../ma/client.js';
 import {
     normalizeVizBarCount,
@@ -148,7 +149,7 @@ function syncSettingsMenuChecks() {
 
 
 function currentRadioStationMedia() {
-    if (!uiH('isNowPlayingRadio')) return null;
+    if (!isNowPlayingRadio()) return null;
     const queueItem = maClient.activeQueue?.current_item;
     return queueItem?.media_item || queueItem || null;
 }
@@ -451,7 +452,7 @@ function updateEqPresetsMenuFocus() {
         row.classList.toggle('focused', state.eqPresetsMenuOpen && i === state.eqPresetFocusIndex);
     });
     state.eqPresetMenuEls[state.eqPresetFocusIndex]?.scrollIntoView({ block: 'nearest' });
-    if (!IS_WEBOS) state.eqPresetMenuEls[state.eqPresetFocusIndex]?.focus();
+    if (!IS_TV_REMOTE) state.eqPresetMenuEls[state.eqPresetFocusIndex]?.focus();
 }
 
 
@@ -642,7 +643,7 @@ function updateVizModesMenuFocus(opts = {}) {
     if (opts.scroll !== false) {
         state.vizModeMenuEls[state.vizModeFocusIndex]?.scrollIntoView({ block: 'nearest' });
     }
-    if (opts.focus !== false && !IS_WEBOS) {
+    if (opts.focus !== false && !IS_TV_REMOTE) {
         state.vizModeMenuEls[state.vizModeFocusIndex]?.focus();
     }
 }
@@ -774,7 +775,7 @@ function updateArtDisplayMenuFocus(opts = {}) {
     if (opts.scroll !== false) {
         state.artDisplayMenuEls[state.artDisplayFocusIndex]?.scrollIntoView({ block: 'nearest' });
     }
-    if (opts.focus !== false && !IS_WEBOS) {
+    if (opts.focus !== false && !IS_TV_REMOTE) {
         state.artDisplayMenuEls[state.artDisplayFocusIndex]?.focus();
     }
 }
@@ -1084,19 +1085,19 @@ function updateMenuFocus() {
     if (target === vizBarCountRow) {
         vizBarCountRow.classList.add('focused');
         vizBarCountSlider?.classList.add('focused');
-        if (!IS_WEBOS) vizBarCountSlider?.focus({ preventScroll: true });
+        if (!IS_TV_REMOTE) vizBarCountSlider?.focus({ preventScroll: true });
         vizBarCountRow.scrollIntoView?.({ block: 'nearest' });
         return;
     }
     if (target === vizFpsRow) {
         vizFpsRow.classList.add('focused');
         vizFpsSlider?.classList.add('focused');
-        if (!IS_WEBOS) vizFpsSlider?.focus({ preventScroll: true });
+        if (!IS_TV_REMOTE) vizFpsSlider?.focus({ preventScroll: true });
         vizFpsRow.scrollIntoView?.({ block: 'nearest' });
         return;
     }
     target?.classList.add('focused');
-    if (!IS_WEBOS) target?.focus();
+    if (!IS_TV_REMOTE) target?.focus();
     target?.scrollIntoView?.({ block: 'nearest' });
 }
 

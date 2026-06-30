@@ -25,15 +25,19 @@ import {
   VIZ_MODES,
   VIZ_MODES_STACK_MAX,
   IS_ANDROID,
-  IS_WEBOS,
+  IS_TIZEN,
+  IS_TV_REMOTE,
   THEME_TRANSITION_MS,
 } from '../constants.js';
+
+/** Matches #viz-canvas CSS filter in base.css; applied via ctx.filter on Tizen. */
+const TIZEN_VIZ_DRAW_FILTER = 'blur(24px) brightness(1.15) saturate(1.25)';
 
 export { VIZ_MODES };
 
 export function getDefaultVizBarCount() {
     if (IS_ANDROID) return VIZ_BAR_COUNT_DEFAULT_ANDROID;
-    if (IS_WEBOS) return VIZ_BAR_COUNT_DEFAULT_WEBOS;
+    if (IS_TV_REMOTE) return VIZ_BAR_COUNT_DEFAULT_WEBOS;
     return VIZ_BAR_COUNT_DEFAULT_WEBUI;
 }
 
@@ -215,7 +219,7 @@ export function isVizModeActiveInUi(modeId) {
 }
 
 export function getDefaultVizFps() {
-    if (IS_WEBOS) return VIZ_FPS_DEFAULT_WEBOS;
+    if (IS_TV_REMOTE) return VIZ_FPS_DEFAULT_WEBOS;
     if (IS_ANDROID) return VIZ_FPS_DEFAULT_ANDROID;
     return VIZ_FPS_DEFAULT_WEBUI;
 }
@@ -557,6 +561,19 @@ class AudioVisualizer {
         this.mode = id;
     }
 
+    _beginDrawFilter(ctx) {
+        if (!IS_TIZEN || !ctx) return false;
+        ctx.save();
+        ctx.filter = TIZEN_VIZ_DRAW_FILTER;
+        return true;
+    }
+
+    _endDrawFilter(ctx, active) {
+        if (!active || !ctx) return;
+        ctx.filter = 'none';
+        ctx.restore();
+    }
+
     _snapRenderToCanvas(targetCtx, mode, paletteLow, paletteHigh) {
         if (!targetCtx || this.W <= 0 || this.H <= 0) return;
         if (this._trackOutCanvas.width !== this.W || this._trackOutCanvas.height !== this.H) {
@@ -567,11 +584,69 @@ class AudioVisualizer {
         this._paletteOverrideLow = paletteLow;
         this._paletteOverrideHigh = paletteHigh;
         this.ctx = targetCtx;
-        targetCtx.clearRect(0, 0, this.W, this.H);
-        this._renderMode(normalizeVizMode(mode));
-        this.ctx = prevCtx;
-        this._paletteOverrideLow = null;
-        this._paletteOverrideHigh = null;
+        const filtered = this._beginDrawFilter(targetCtx);
+        try {
+            targetCtx.clearRect(0, 0, this.W, this.H);
+            this._renderMode(normalizeVizMode(mode));
+        } finally {
+            this._endDrawFilter(targetCtx, filtered);
+            this.ctx = prevCtx;
+            this._paletteOverrideLow = null;
+            this._paletteOverrideHigh = null;
+        }
+    }
+
+    _snapRenderComposite(targetCtx, paletteLow, paletteHigh) {
+        if (!targetCtx || this.W <= 0 || this.H <= 0) return;
+        if (this._trackOutCanvas.width !== this.W || this._trackOutCanvas.height !== this.H) {
+            this._trackOutCanvas.width = this.W;
+            this._trackOutCanvas.height = this.H;
+        }
+        const prevCtx = this.ctx;
+        this._paletteOverrideLow = paletteLow;
+        this._paletteOverrideHigh = paletteHigh;
+        this.ctx = targetCtx;
+        const filtered = this._beginDrawFilter(targetCtx);
+        try {
+            targetCtx.clearRect(0, 0, this.W, this.H);
+            this._renderCurrentMode();
+        } finally {
+            this._endDrawFilter(targetCtx, filtered);
+            this.ctx = prevCtx;
+            this._paletteOverrideLow = null;
+            this._paletteOverrideHigh = null;
+        }
+    }
+
+    /** Palette-only crossfade for single/double viz (keeps current mode stack). */
+    beginPaletteCrossfade(paletteLow, paletteHigh) {
+        if (!paletteLow || !paletteHigh) return;
+        if (this.ctx && this.W > 0 && this.H > 0) {
+            if (this._trackCrossfade) {
+                if (this._trackInMode) {
+                    this._snapRenderToCanvas(
+                        this._trackOutCtx, this._trackInMode,
+                        this._trackInPaletteLow, this._trackInPaletteHigh,
+                    );
+                } else {
+                    this._snapRenderComposite(
+                        this._trackOutCtx,
+                        this._trackInPaletteLow,
+                        this._trackInPaletteHigh,
+                    );
+                }
+            } else {
+                if (this._modeFade > 0) this._modeFade = 0;
+                const { low, high } = this._paletteAtTime();
+                this._snapRenderComposite(this._trackOutCtx, low, high);
+            }
+        }
+        this._trackInMode = null;
+        this._trackInPaletteLow = paletteLow;
+        this._trackInPaletteHigh = paletteHigh;
+        this._trackCrossfadeStart = performance.now();
+        this._trackCrossfade = true;
+        this._modeFade = 0;
     }
 
     beginTrackCrossfade(incomingMode, paletteLow, paletteHigh) {
@@ -2011,57 +2086,65 @@ class AudioVisualizer {
 
         this.updateHeights();
         ctx.clearRect(0, 0, this.W, this.H);
+        const filtered = this._beginDrawFilter(ctx);
+        try {
+            if (this._trackCrossfade) {
+                const { t, ease } = this._crossfadeEase(this._trackCrossfadeStart);
+                const outAlpha = 1 - ease;
+                if (outAlpha > 0.01) {
+                    ctx.save();
+                    ctx.globalAlpha = outAlpha;
+                    ctx.drawImage(this._trackOutCanvas, 0, 0);
+                    ctx.restore();
+                }
+                if (ease > 0.01) {
+                    ctx.save();
+                    ctx.globalAlpha = ease;
+                    this._paletteOverrideLow = this._trackInPaletteLow;
+                    this._paletteOverrideHigh = this._trackInPaletteHigh;
+                    if (this._trackInMode) {
+                        this._renderMode(this._trackInMode);
+                    } else {
+                        this._renderCurrentMode();
+                    }
+                    this._paletteOverrideLow = null;
+                    this._paletteOverrideHigh = null;
+                    ctx.restore();
+                }
+                if (t >= 1) {
+                    this._trackCrossfade = false;
+                    this.setPaletteColors(this._trackInPaletteLow, this._trackInPaletteHigh);
+                    this.releasePaletteHold();
+                    this._trackInMode = null;
+                    this._trackInPaletteLow = null;
+                    this._trackInPaletteHigh = null;
+                }
+                return;
+            }
 
-        if (this._trackCrossfade) {
-            const { t, ease } = this._crossfadeEase(this._trackCrossfadeStart);
-            const outAlpha = 1 - ease;
-            if (outAlpha > 0.01) {
-                ctx.save();
-                ctx.globalAlpha = outAlpha;
-                ctx.drawImage(this._trackOutCanvas, 0, 0);
-                ctx.restore();
+            if (this._modeFade > 0) {
+                const { t, ease } = this._modeFadeEase();
+                const oldAlpha = 1 - ease;
+                if (oldAlpha > 0.01) {
+                    ctx.save();
+                    ctx.globalAlpha = oldAlpha;
+                    ctx.drawImage(this._ghostCanvas, 0, 0);
+                    ctx.restore();
+                }
+                if (ease > 0.01) {
+                    ctx.save();
+                    ctx.globalAlpha = ease;
+                    this._renderCurrentMode();
+                    ctx.restore();
+                }
+                if (t >= 1) this._modeFade = 0;
+                return;
             }
-            if (ease > 0.01) {
-                ctx.save();
-                ctx.globalAlpha = ease;
-                this._paletteOverrideLow = this._trackInPaletteLow;
-                this._paletteOverrideHigh = this._trackInPaletteHigh;
-                this._renderMode(this._trackInMode);
-                this._paletteOverrideLow = null;
-                this._paletteOverrideHigh = null;
-                ctx.restore();
-            }
-            if (t >= 1) {
-                this._trackCrossfade = false;
-                this.setPaletteColors(this._trackInPaletteLow, this._trackInPaletteHigh);
-                this.releasePaletteHold();
-                this._trackInMode = null;
-                this._trackInPaletteLow = null;
-                this._trackInPaletteHigh = null;
-            }
-            return;
+
+            this._renderCurrentMode();
+        } finally {
+            this._endDrawFilter(ctx, filtered);
         }
-
-        if (this._modeFade > 0) {
-            const { t, ease } = this._modeFadeEase();
-            const oldAlpha = 1 - ease;
-            if (oldAlpha > 0.01) {
-                ctx.save();
-                ctx.globalAlpha = oldAlpha;
-                ctx.drawImage(this._ghostCanvas, 0, 0);
-                ctx.restore();
-            }
-            if (ease > 0.01) {
-                ctx.save();
-                ctx.globalAlpha = ease;
-                this._renderCurrentMode();
-                ctx.restore();
-            }
-            if (t >= 1) this._modeFade = 0;
-            return;
-        }
-
-        this._renderCurrentMode();
     }
 
     start() {
@@ -2157,6 +2240,11 @@ function pickNextCycleMode() {
     idx = ((idx % pool.length) + pool.length) % pool.length;
     localStorage.setItem(VIZ_CYCLE_INDEX_KEY, String(idx));
     return pool[idx];
+}
+
+export function beginVizPaletteCrossfade(paletteLow, paletteHigh) {
+    if (getDisableVisualizer()) return;
+    getVisualizer()?.beginPaletteCrossfade(paletteLow, paletteHigh);
 }
 
 export function beginShuffleCycleTrackCrossfade(trackKey, paletteLow, paletteHigh, opts = {}) {

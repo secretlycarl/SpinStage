@@ -19,6 +19,10 @@ export const IS_ANDROID = IS_CAPACITOR && window.Capacitor?.getPlatform?.() === 
 
 export const IS_WEBOS = typeof webOS !== 'undefined'; // SYNC-WEBOS:IS_WEBOS
 
+export const IS_TIZEN = false; // SYNC-TIZEN:IS_TIZEN
+
+export const IS_TV_REMOTE = IS_WEBOS || IS_TIZEN;
+
 export const HAS_TOUCH_HARDWARE = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 export const ART_URL_CACHE_MAX = 80;
@@ -104,7 +108,7 @@ export const GROUP_DISSOLVE_STEP_MS = 350;
 
 export const BROWSE_VIEWS_MAX = 12;
 
-export const ARTIST_PROVIDERS_CACHE_VERSION = 4;
+export const ARTIST_PROVIDERS_CACHE_VERSION = 6;
 
 export const PUBLIC_RUNTIME_CONFIG = true;
 
@@ -291,7 +295,7 @@ export const VIZ_MODES = [
     { id: 'cascade', label: 'Cascade' },
 ];
 
-export const BG_BAKE_BLUR_PX = IS_ANDROID ? 4 : (IS_WEBOS ? 5 : 8);
+export const BG_BAKE_BLUR_PX = IS_ANDROID ? 4 : (IS_TV_REMOTE ? 5 : 8);
 
 export const ANDROID_SEARCH_CHIPS_COLLAPSED_KEY = 'spinstage_android_search_chips_collapsed';
 

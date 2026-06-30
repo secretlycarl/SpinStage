@@ -14,6 +14,7 @@ PLATFORM_DIRS = {
     "webui": REPO / "spinstage-webui",
     "android": REPO / "spinstage-android",
     "webos": REPO / "spinstage-webos",
+    "tizen": REPO / "spinstage-tizen",
 }
 
 

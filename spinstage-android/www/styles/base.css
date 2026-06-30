@@ -34,7 +34,7 @@ body {
     position: absolute; inset: -10%; background-size: cover;
     background-position: 50% 50%; filter: brightness(0.35) saturate(1.2);
     z-index: 1; opacity: 0;
-    transition: opacity 1s ease-in-out;
+    transition: opacity 1s ease-in-out, filter 1s ease-in-out;
     pointer-events: none;
 }
 .bg-layer.bg-css-blur {
@@ -1131,7 +1131,7 @@ body.show-ui:not(.panel-open) .info {
 
 .cover-wrapper {
     position: relative; z-index: 1;
-    width: 50vh; height: 50vh; margin-bottom: 25px;
+    width: 37.5vh; height: 37.5vh; margin-bottom: 25px;
     border-radius: 20px; overflow: hidden;
     box-shadow: 0 40px 75px rgba(0,0,0,0.6);
     border: 1px solid rgba(255,255,255,0.1);
@@ -1439,7 +1439,8 @@ body:not(.playing) #idle-progress-bar {
 #idle-progress.hide-for-controls {
     opacity: 0; visibility: hidden;
 }
-body.webos-tv #idle-progress:not(.hide-for-controls) {
+body.webos-tv #idle-progress:not(.hide-for-controls),
+body.tizen-tv #idle-progress:not(.hide-for-controls) {
     opacity: 1 !important; visibility: visible !important;
 }
 #idle-progress-bar {
@@ -1564,6 +1565,7 @@ body.show-ui:not(.panel-open) #controls-container {
 body.web-ui #controls-container::before,
 body.browser-ui #controls-container::before,
 body.webos-tv #controls-container::before,
+body.tizen-tv #controls-container::before,
 body.touch-ui:not(.android) #controls-container::before { display: none; }
 body.android.touch-ui #controls-container {
     height: auto; padding-top: 10px;
@@ -1573,7 +1575,8 @@ body.android.touch-ui #controls-container {
 body.android.touch-ui #controls-container::before { display: none; }
 @media (orientation: landscape) {
     body.web-ui #controls-container,
-    body.webos-tv #controls-container {
+    body.webos-tv #controls-container,
+    body.tizen-tv #controls-container {
         height: 150px;
         padding-top: 0;
     }

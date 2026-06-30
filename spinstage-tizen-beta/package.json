@@ -1,0 +1,13 @@
+{
+  "name": "spinstage-tizen",
+  "private": true,
+  "version": "1.1.0",
+  "description": "SpinStage for Samsung Tizen TV",
+  "scripts": {
+    "inject:defaults": "python scripts/inject_user_settings.py",
+    "build-web": "tizen build-web -- .",
+    "package:unsigned": "npm run build-web && tizen package -t wgt -- .buildResult",
+    "package": "npm run inject:defaults && npm run build-web && tizen package -t wgt -s spinstage -- .buildResult",
+    "resign": "tizen package -t wgt -s spinstage --"
+  }
+}

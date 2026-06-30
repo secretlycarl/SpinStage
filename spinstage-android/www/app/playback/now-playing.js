@@ -76,7 +76,7 @@ import {
   idleProgressBar,
 } from '../dom.js';
 import { maClient } from '../ma/client.js';
-import { getVisualizer, getVizSelectionMode, beginShuffleCycleTrackCrossfade } from './visualizer.js';
+import { getVisualizer, getVizSelectionMode, beginShuffleCycleTrackCrossfade, beginVizPaletteCrossfade } from './visualizer.js';
 import { npH } from './handlers.js';
 import {
   registerNpTextMarquee,
@@ -371,10 +371,29 @@ function trackKeysEquivalent(a, b, queueItem) {
 }
 
 
+function sendspinIdentityKey(m) {
+    if (!m) return '';
+    return String(m.uri || m.source_id || m.title || '').trim();
+}
+
+
+function sendspinTrackChanged(m) {
+    const key = sendspinIdentityKey(m);
+    if (!key) return false;
+    const prev = state.lastSendspinTrackKey || '';
+    if (!prev) return false;
+    return key !== prev;
+}
+
+
+function rememberSendspinTrackKey(m) {
+    const key = sendspinIdentityKey(m);
+    if (key) state.lastSendspinTrackKey = key;
+}
+
+
 function settleBgLayersForTrackChange() {
-    clearTimeout(state._bgCrossfadeTimer);
-    state._bgCrossfadeTimer = null;
-    // Keep visible layers intact; crossfadeBackground handles the handoff.
+    // Leave in-flight opacity transitions running; crossfadeBackground handles layer handoff.
 }
 
 
@@ -383,6 +402,7 @@ function bumpNpVisualGeneration(clearAccent = true) {
     if (clearAccent) {
         state.npVisuals.appliedAccentKey = '';
         state._lastVizPaletteKey = '';
+        state._bgLastCrossfadeImage = '';
     }
     cancelPrefetch();
     settleBgLayersForTrackChange();
@@ -441,11 +461,15 @@ function setAccentColors(uiAccent, edgeAccent, opts = {}) {
         state.npVisuals.pendingAccent = {
             uiAccent,
             edgeAccent: edge,
-            snap: opts.snap !== false,
+            snap: false,
         };
         return;
     }
-    if (opts.snap) root.classList.add('accent-snap');
+    if (opts.snap) {
+        root.classList.add('accent-snap');
+    } else {
+        root.classList.remove('accent-snap');
+    }
     root.style.setProperty('--accent', uiAccent);
     syncFocusAccentColors(uiAccent);
     root.style.setProperty('--viz-low', edge);
@@ -478,7 +502,7 @@ function commitPendingAccent(opts = {}) {
     if (!pending) return false;
     state.npVisuals.pendingAccent = null;
     setAccentColors(pending.uiAccent, pending.edgeAccent, {
-        snap: pending.snap,
+        snap: false,
         skipVizPalette: opts.skipVizPalette,
     });
     return true;
@@ -579,7 +603,7 @@ function cssBackgroundUrl(url) {
 
 const COVER_SQUARE_EPS = 0.06;
 
-const COVER_MAX_VH = 50;
+const COVER_MAX_VH = 37.5;
 
 const _coverAnalyzeCanvas = document.createElement('canvas');
 const _coverAnalyzeCtx = _coverAnalyzeCanvas.getContext('2d', { willReadFrequently: true });
@@ -637,7 +661,8 @@ function analyzeCoverArt(img) {
 
 function getCornerCoverMaxVh() {
     if (IS_ANDROID && window.matchMedia('(orientation: portrait)').matches) return 13.2;
-    return 26.4;
+    if (IS_ANDROID) return 26.4;
+    return 21;
 }
 
 
@@ -808,14 +833,17 @@ function scheduleNpEffects(img, artUrl, trackKey, generation, opts) {
         if (generation !== state.npVisuals.generation) return;
         if (trackKey && trackKey !== state.npVisuals.trackKey) return;
         const item = maClient.activeQueue?.current_item?.media_item;
+        const priorStableArtUrl = opts.priorStableArtUrl ?? state.npVisuals.stableArtUrl;
         const sameStableArt = state.npVisuals.accentReady
             && state.npVisuals.appliedAccentKey
-            && artUrlsEquivalent(artUrl, state.npVisuals.stableArtUrl);
-        const coordinated = !sameStableArt && !!state.npVisuals.lastAppliedAccentColor;
+            && artUrlsEquivalent(artUrl, priorStableArtUrl);
+        const trackChange = !!opts.trackChange;
         const selMode = getVizSelectionMode();
         const isShuffleCycle = selMode === 'shuffle' || selMode === 'cycle';
-        const deferPresentation = !sameStableArt && !opts.immediate;
-        const holdOutgoingPalette = deferPresentation || (isShuffleCycle && !sameStableArt);
+        const useTransition = trackChange || (!opts.immediate && !sameStableArt);
+        const deferPresentation = useTransition;
+        const holdOutgoingPalette = useTransition || (isShuffleCycle && !sameStableArt);
+        const skipVizInSetAccent = isShuffleCycle || (useTransition && trackChange);
         let paletteHeld = false;
         const releasePaletteHoldSafe = () => {
             if (!paletteHeld) return;
@@ -832,13 +860,16 @@ function scheduleNpEffects(img, artUrl, trackKey, generation, opts) {
             let accentOk = false;
             let pendingTheme = null;
             const accentOpts = {
-                snap: !coordinated,
+                snap: useTransition ? false : !!opts.immediate,
                 rawArtUrl: opts.rawArtUrl || artUrl,
-                skipVizPalette: isShuffleCycle,
+                skipVizPalette: skipVizInSetAccent,
                 defer: deferPresentation,
             };
-            if (sameStableArt) {
-                paintAccentFromStableArt(artUrl, { skipVizPalette: isShuffleCycle });
+            if (sameStableArt && !trackChange) {
+                paintAccentFromStableArt(artUrl, {
+                    skipVizPalette: isShuffleCycle,
+                    snap: false,
+                });
                 accentOk = true;
             } else if (sourceImg) {
                 accentOk = applyNpAccent(sourceImg, artUrl, accentOpts);
@@ -857,11 +888,17 @@ function scheduleNpEffects(img, artUrl, trackKey, generation, opts) {
             const shufflePalette = (trackKey && isShuffleCycle)
                 ? accentColorsForShuffleCrossfade(pendingTheme)
                 : null;
+            const trackPalette = (!isShuffleCycle && useTransition && trackChange)
+                ? accentColorsForShuffleCrossfade(pendingTheme)
+                : null;
             if (deferPresentation) {
-                commitPendingAccent({ skipVizPalette: isShuffleCycle });
+                commitPendingAccent({ skipVizPalette: skipVizInSetAccent });
             }
             if (shufflePalette) {
                 beginShuffleCycleTrackCrossfade(trackKey, shufflePalette.low, shufflePalette.high);
+                releasePaletteHoldSafe();
+            } else if (trackPalette) {
+                beginVizPaletteCrossfade(trackPalette.low, trackPalette.high);
                 releasePaletteHoldSafe();
             } else {
                 if (deferPresentation) releasePaletteHoldSafe();
@@ -872,6 +909,10 @@ function scheduleNpEffects(img, artUrl, trackKey, generation, opts) {
             if (generation === state.npVisuals.generation) {
                 state.npVisuals.accentReady = ready;
                 state.npVisuals.status = ready ? 'ready' : 'idle';
+                if (ready && artUrl) {
+                    state.npVisuals.stableArtUrl = artUrl;
+                    state.npVisuals.artUrl = artUrl;
+                }
                 npH('syncAndroidMediaSession');
                 updatePlayButtonUi();
             }
@@ -958,7 +999,7 @@ function paintAccentFromStableArt(artUrl, opts = {}) {
     const cached = readCachedTheme(artUrl);
     if (!cached) return false;
     return applyCachedAccent(cached, state.npVisuals.appliedAccentKey, {
-        snap: true,
+        snap: opts.snap === true,
         defer: false,
         skipVizPalette: opts.skipVizPalette,
     });
@@ -1036,11 +1077,6 @@ async function applyNpBackground(img, url, trackKey, generation, opts = {}) {
         return;
     }
 
-    if (displayFallback && trackKey !== state._bgBakeItemKey) {
-        _bgBakeCssFallback = true;
-        setBackgroundArt(cssBackgroundUrl(displayFallback), { cssBlurFallback: true });
-    }
-
     let bakeImg = img;
     const needsCorsSource = !!(bakeUrl && (bakeUrl !== url || artUrlNeedsCors(rawUrl)));
     if (needsCorsSource) {
@@ -1049,17 +1085,10 @@ async function applyNpBackground(img, url, trackKey, generation, opts = {}) {
         if (corsImg) bakeImg = corsImg;
     }
 
-    const runBake = () => {
-        if (generation != null && generation !== state.npVisuals.generation) return;
-        finishBackgroundBake(bakeImg, bakeUrl, trackKey, generation, {
-            fallbackUrl: displayFallback,
-        });
-    };
-    if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(runBake, { timeout: 1200 });
-    } else {
-        setTimeout(runBake, 16);
-    }
+    if (generation != null && generation !== state.npVisuals.generation) return;
+    finishBackgroundBake(bakeImg, bakeUrl, trackKey, generation, {
+        fallbackUrl: displayFallback,
+    });
 }
 
 
@@ -1127,7 +1156,7 @@ async function runNowPlayingVisualPipeline(opts = {}) {
         return;
     }
 
-    if (!opts.force && artUnchanged && state.npVisuals.accentReady && state.npVisuals.appliedAccentKey) {
+    if (!opts.force && sameTrack && artUnchanged && state.npVisuals.accentReady && state.npVisuals.appliedAccentKey) {
         paintAccentFromStableArt(displayUrl);
         state.npVisuals.trackKey = trackKey;
         state.npVisuals.status = 'ready';
@@ -1157,19 +1186,22 @@ async function runNowPlayingVisualPipeline(opts = {}) {
             accentOk = await resolveNpAccentFromProxy(artUrl, maMedia, generation, accentOpts);
         }
     } else if (artChanged || opts.force || !sameTrack) {
+        const priorStableArtUrl = state.npVisuals.stableArtUrl;
         applyNpPresentation(img, displayUrl, trackKey, generation, {
-            ...accentOpts,
+            rawArtUrl: artUrl,
             force: opts.force,
-            immediate: opts.force || !sameTrack || artChanged,
+            immediate: !!opts.immediate,
+            trackChange: !sameTrack,
+            priorStableArtUrl,
         });
     }
 
     if (generation === state.npVisuals.generation) {
-        state.npVisuals.artUrl = displayUrl;
         state._lastArtAppliedUrl = displayUrl;
         state._lastArtUpdateKey = trackKey;
-        if (displayUrl) state.npVisuals.stableArtUrl = displayUrl;
         if (accentOnly) {
+            if (displayUrl) state.npVisuals.stableArtUrl = displayUrl;
+            state.npVisuals.artUrl = displayUrl;
             const ready = npVisualPipelineReady(accentOk, img);
             state.npVisuals.accentReady = ready;
             state.npVisuals.status = ready ? 'ready' : 'idle';
@@ -1620,7 +1652,10 @@ function crossfadeBackground(bgImage, opts = {}) {
     curEl.style.zIndex = '1';
     const curVisible = curEl.classList.contains('visible') && curEl.style.backgroundImage;
     nextEl.classList.add('visible');
-    if (curVisible) curEl.classList.remove('visible');
+    void nextEl.offsetWidth;
+    if (curVisible) {
+        curEl.classList.remove('visible');
+    }
     state.activeBgLayer = nextKey;
     state._bgCrossfadeTimer = setTimeout(() => {
         curEl.classList.remove('visible');
@@ -1634,7 +1669,6 @@ function crossfadeBackground(bgImage, opts = {}) {
 
 
 function setBackgroundArt(bgImage, opts = {}) {
-    syncBgLayerBlurFallback(!!opts.cssBlurFallback);
     if (opts.inPlace && bgLayers[state.activeBgLayer]) {
         state._bgLastCrossfadeImage = bgImage;
         bgLayers[state.activeBgLayer].style.backgroundImage = bgImage;
@@ -2025,6 +2059,24 @@ function updateProgressUI(posMs, durMs) {
 function getExtrapolatedProgress() {
     const spin = getSendspinTrackProgress();
     if (isSendspinProgressAuthority()) {
+        const m = state.lastSendspinMetadata;
+        if (m && isSendspinMetadataStale(m) && spin && isNearTrackEnd(spin.positionMs)) {
+            const spinKey = sendspinIdentityKey(m);
+            const queueItem = maClient.activeQueue?.current_item;
+            if (spinKey && state.lastProgressTrackId
+                && !trackKeysEquivalent(spinKey, state.lastProgressTrackId, queueItem)) {
+                const durMs = m.progress?.track_duration || spin.durationMs || 0;
+                const posMs = Math.min(
+                    m.progress?.track_progress ?? 0,
+                    durMs > 0 ? durMs : Number.MAX_SAFE_INTEGER,
+                );
+                return {
+                    positionMs: posMs,
+                    durationMs: durMs || spin.durationMs,
+                    playbackSpeed: spin.playbackSpeed,
+                };
+            }
+        }
         if (spin && !shouldIgnoreSendspinProgress(spin)) return spin;
         return spin || null;
     }
@@ -2057,6 +2109,21 @@ function resolvePlaybackResumePosition() {
     const ma = getMaQueueProgress();
     const speed = spin?.playbackSpeed || ma?.playbackSpeed || state.progressAnchorSpeed || 1;
     if (isSendspinProgressAuthority()) {
+        const m = state.lastSendspinMetadata;
+        const queueItem = maClient.activeQueue?.current_item;
+        if (m && isSendspinMetadataStale(m)) {
+            const spinKey = sendspinIdentityKey(m);
+            const maKey = getNowPlayingItemKey(queueItem, m);
+            if (spinKey && maKey && !trackKeysEquivalent(spinKey, maKey, queueItem)) {
+                const metaPos = m.progress?.track_progress ?? spin?.positionMs ?? 0;
+                if (metaPos < state.currentPos - PROGRESS_SOFT_DRIFT_MS || isNearTrackEnd(state.currentPos)) {
+                    return { positionMs: metaPos, playbackSpeed: speed };
+                }
+            }
+            if (spin && isNearTrackEnd(spin.positionMs) && isNearTrackEnd(state.currentPos)) {
+                return { positionMs: state.currentPos, playbackSpeed: speed };
+            }
+        }
         if (spin) return { positionMs: spin.positionMs, playbackSpeed: speed };
         return { positionMs: state.currentPos, playbackSpeed: speed };
     }
@@ -2099,6 +2166,7 @@ function syncProgressOnStreamStart(streamGen) {
         state.progressSpinGuardUntil = 0;
         const queueItem = maClient.activeQueue?.current_item;
         const trackKey = resolveTrackKey(m, queueItem);
+        rememberSendspinTrackKey(m);
         const durMs = spin?.durationMs || resolveTrackDurationMs(m, queueItem);
         const speed = spin?.playbackSpeed ?? state.progressAnchorSpeed ?? 1;
         let posMs = 0;
@@ -2146,6 +2214,23 @@ function syncProgressOnStreamStart(streamGen) {
     const loopRestart = isNearTrackEnd(cur) && posMs < 3000;
     const staleAhead = cur > 3000 && posMs < 3000;
     const significantBack = posMs < cur - PROGRESS_SOFT_DRIFT_MS;
+    const spinAdvanced = sendspinTrackChanged(m);
+    if (spinAdvanced || (isNearTrackEnd(cur) && staleAhead)) {
+        rememberSendspinTrackKey(m);
+        const trackId = sendspinIdentityKey(m) || resolveTrackKey(m, maClient.activeQueue?.current_item);
+        if (trackId) {
+            state.lastProgressTrackId = trackId;
+            state.sendspinAuthorityKey = trackId;
+        }
+        state.progressSpinGuardUntil = 0;
+        if (npH('isSeekAuthorityActive')) npH('clearSeekAuthority');
+        const resetDur = spin?.durationMs || resolveTrackDurationMs(m);
+        const resetPos = spinAdvanced ? (spin?.positionMs ?? m?.progress?.track_progress ?? 0) : 0;
+        anchorProgress(resetPos, speed);
+        state.progressResyncAt = performance.now();
+        updateProgressUI(resetPos, resetDur || ma?.durationMs || spin?.durationMs || 0);
+        return;
+    }
     if (!significantBack && !loopRestart) return;
     if (shouldRejectIncomingProgress(posMs, { allowRestart: true, currentMs: cur })) {
         if (!loopRestart && !staleAhead) return;
@@ -2160,6 +2245,23 @@ function syncProgressOnStreamStart(streamGen) {
 function syncProgressFromMetadata(m, playing) {
     if (!m?.progress || isNowPlayingRadio()) return;
     if (npH('getIsSeeking')) return;
+
+    if (sendspinTrackChanged(m)) {
+        rememberSendspinTrackKey(m);
+        const queueItem = maClient.activeQueue?.current_item;
+        const trackId = sendspinIdentityKey(m) || resolveTrackKey(m, queueItem);
+        state.sendspinAuthorityKey = trackId;
+        state.lastProgressTrackId = trackId;
+        state.lastNowPlayingKey = trackId;
+        commitNpTextTrack(trackId);
+        if (!npH('isSeekAuthorityActive')) {
+            state.progressSpinGuardUntil = 0;
+            resetTrackProgressFromSources(m, { trackChanged: true });
+        }
+        return;
+    }
+    rememberSendspinTrackKey(m);
+
     const staleAuth = isSendspinProgressAuthority();
     const spin = getSendspinTrackProgress();
     if (spin && !staleAuth && shouldIgnoreSendspinProgress(spin)) return;

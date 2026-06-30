@@ -1,0 +1,4 @@
+*.wgt
+.buildResult/
+.sign/
+.settings/

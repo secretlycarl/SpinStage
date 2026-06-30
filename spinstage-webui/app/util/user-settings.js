@@ -1,4 +1,4 @@
-import { IS_CAPACITOR, IS_WEBOS } from '../constants.js';
+import { IS_CAPACITOR, IS_TV_REMOTE } from '../constants.js';
 
 const LOCAL_SETTINGS_KEY = 'spinstage_user_settings';
 
@@ -74,7 +74,7 @@ function normalizeUserSettingsPayload(payload) {
 export async function saveUserSettingsConfig(payload) {
     const data = normalizeUserSettingsPayload(payload);
     writeLocalUserSettings(data);
-    const isBrowserWebui = !IS_CAPACITOR && !IS_WEBOS && typeof webOS === 'undefined';
+    const isBrowserWebui = !IS_CAPACITOR && !IS_TV_REMOTE && typeof webOS === 'undefined';
     if (!isBrowserWebui) return;
     const res = await fetch('/api/user-settings', {
         method: 'POST',

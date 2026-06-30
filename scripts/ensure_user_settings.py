@@ -13,6 +13,7 @@ REPO = Path(__file__).resolve().parent.parent
 PLATFORM_DIRS = {
     "android": REPO / "spinstage-android",
     "webos": REPO / "spinstage-webos",
+    "tizen": REPO / "spinstage-tizen",
 }
 
 

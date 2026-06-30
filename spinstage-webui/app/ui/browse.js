@@ -607,7 +607,7 @@ function toggleRecommendedSection(sectionKey) {
     state.browseStack[state.browseStack.length - 1] = entry;
     const view = getBrowseView();
     view.items = buildRecommendedBrowseItems(entry);
-    storeBrowseView(entry.key, view);
+    storeBrowseView(browseEntryCacheKey(entry), view);
     renderBrowsePanel(true);
     uiH('updatePanelFocus');
 }
@@ -622,7 +622,7 @@ function setRecommendedMediaFilter(filterId) {
     state.searchFilterFocusIndex = Math.max(0, RECOMMENDED_MEDIA_FILTERS.findIndex((f) => f.id === filterId));
     const view = getBrowseView();
     view.items = buildRecommendedBrowseItems(entry);
-    storeBrowseView(entry.key, view);
+    storeBrowseView(browseEntryCacheKey(entry), view);
     renderBrowsePanel(true);
     state.panelFocusIndex = 0;
     state.browseRowSubFocus = 0;
@@ -648,7 +648,7 @@ function toggleDiscographySection(sectionKey) {
     state.browseStack[state.browseStack.length - 1] = entry;
     const view = getBrowseView();
     view.items = buildGroupedDiscographyItems(entry.discographyAlbums, entry.collapsedSections);
-    storeBrowseView(entry.key, view);
+    storeBrowseView(browseEntryCacheKey(entry), view);
     renderBrowsePanel(true);
     uiH('updatePanelFocus');
 }
@@ -796,9 +796,7 @@ async function switchAlphaViewMode(mode) {
     if (!isAlphaListEntry(entry) || entry.alphaViewMode === mode) return;
     entry.alphaViewMode = mode;
     state.browseStack[state.browseStack.length - 1] = entry;
-    delete state.browseViews[entry.key];
-    const orderIdx = state._browseViewOrder.indexOf(entry.key);
-    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+    deleteBrowseViewCache(entry);
     state._lastBrowseRenderKey = '';
     renderAlphaViewBar(entry);
     await loadCurrentBrowseView();
@@ -1396,7 +1394,7 @@ function maItemToPanelRow(item, opts = {}) {
     if (['artist', 'album', 'playlist'].includes(mediaType) && !isRadio) kind = 'nav';
     if (mediaType === 'podcast' || mediaType === 'genre') kind = 'nav';
     let providerBadge;
-    if (opts.activeArtistProvider) {
+    if (opts.activeArtistProvider && kind === 'nav') {
         providerBadge = normalizeProviderId(opts.activeArtistProvider);
     } else if (opts.preferStoredProvider) {
         providerBadge = itemStoredProviderId(item);
@@ -1451,9 +1449,29 @@ function getCurrentBrowseEntry() {
 
 
 
+function browseEntryCacheKey(entry) {
+    if (!entry?.key) return '';
+    if (entry.type === 'album' && entry.activeArtistProvider) {
+        return `${entry.key}@${normalizeProviderId(entry.activeArtistProvider)}`;
+    }
+    return entry.key;
+}
+
+
+
+function deleteBrowseViewCache(entry) {
+    const cacheKey = browseEntryCacheKey(entry);
+    delete state.browseViews[cacheKey];
+    const orderIdx = state._browseViewOrder.indexOf(cacheKey);
+    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+}
+
+
+
 function getBrowseView() {
     const entry = getCurrentBrowseEntry();
-    return state.browseViews[entry.key] || { title: entry.title, hint: '', items: [] };
+    const cacheKey = browseEntryCacheKey(entry);
+    return state.browseViews[cacheKey] || { title: entry.title, hint: '', items: [] };
 }
 
 
@@ -1777,7 +1795,7 @@ async function loadBrowsePage(reset = false) {
     state.browseListLoading = true;
     try {
         await maClient.ensureReady();
-        const view = state.browseViews[entry.key] || {
+        const view = state.browseViews[browseEntryCacheKey(entry)] || {
             title: entry.title,
             hint: entry.hint || '',
             items: [],
@@ -1818,7 +1836,7 @@ async function loadBrowsePage(reset = false) {
         view.hasMore = page.hasMore;
         view.title = entry.title;
         view.hint = entry.hint || '';
-        storeBrowseView(entry.key, view);
+        storeBrowseView(browseEntryCacheKey(entry), view);
         if (isLetterPage) {
             state._lastBrowseRenderKey = '';
         }
@@ -2079,6 +2097,20 @@ async function refreshArtistProviderDiscovery(entry) {
 
 
 
+async function artistProviderHasAlbums(item, provider) {
+    try {
+        const albums = await maClient.artistAlbums(item, {
+            preferredProvider: provider,
+            inLibraryOnly: false,
+        });
+        return Array.isArray(albums) && albums.length > 0;
+    } catch {
+        return false;
+    }
+}
+
+
+
 async function discoverArtistProviders(artistItem, onProgress) {
     const cacheKey = `${ARTIST_PROVIDERS_CACHE_VERSION}:`
         + (artistItem?.uri || artistItem?.item_id
@@ -2172,7 +2204,10 @@ async function discoverArtistProviders(artistItem, onProgress) {
         }
     })();
     const externalDiscovery = (async () => {
-        for (const artist of otherExternals) add(artist);
+        for (const artist of otherExternals) {
+            const prov = normalizeProviderId(itemProviderId(artist));
+            if (await artistProviderHasAlbums(artist, prov)) add(artist);
+        }
     })();
     await Promise.all([spotifyDiscovery, externalDiscovery]);
 
@@ -2504,9 +2539,7 @@ async function switchBrowseProvider(providerId) {
     entry.browseProviderId = providerId;
     saveBrowseProviderPref(getBrowseSectionKey(entry), providerId);
     state.browseStack[state.browseStack.length - 1] = entry;
-    delete state.browseViews[entry.key];
-    const orderIdx = state._browseViewOrder.indexOf(entry.key);
-    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+    deleteBrowseViewCache(entry);
     state._lastBrowseRenderKey = '';
     await renderBrowseProviderBar(entry);
     if (isBrowsePageable(entry)) {
@@ -2554,15 +2587,13 @@ function renderArtistProviderBar(entry) {
 
 
 async function refreshArtistDiscographyView(entry) {
-    delete state.browseViews[entry.key];
-    const orderIdx = state._browseViewOrder.indexOf(entry.key);
-    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+    deleteBrowseViewCache(entry);
     state._lastBrowseRenderKey = '';
     delete entry.discographyAlbums;
     delete entry.collapsedSections;
     state.browseStack[state.browseStack.length - 1] = entry;
     const items = await fetchBrowseItemsForEntry(entry);
-    storeBrowseView(entry.key, {
+    storeBrowseView(browseEntryCacheKey(entry), {
         title: entry.title,
         hint: entry.hint || '',
         items,
@@ -2586,9 +2617,7 @@ async function switchArtistProvider(index) {
     delete entry.collapsedSections;
     delete entry.discographyAlbums;
     state.browseStack[state.browseStack.length - 1] = entry;
-    delete state.browseViews[entry.key];
-    const orderIdx = state._browseViewOrder.indexOf(entry.key);
-    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+    deleteBrowseViewCache(entry);
     state._lastBrowseRenderKey = '';
     renderArtistProviderBar(entry);
     await loadCurrentBrowseView({ skipArtistProviderDiscovery: true });
@@ -2791,13 +2820,18 @@ async function fetchBrowseItemsForEntry(entry) {
     }
 
     if (entry.type === 'album') {
-        entry.item = await maClient.resolveMaItem(entry.item);
-        state.browseStack[state.browseStack.length - 1] = entry;
         const prov = entry.activeArtistProvider || null;
+        let item = entry.item;
+        item = await maClient.resolveMaItem(item);
+        if (prov) {
+            item = await maClient.resolveMaItemForProvider(item, prov);
+        }
+        entry.item = item;
+        state.browseStack[state.browseStack.length - 1] = entry;
         const trackOpts = uiH('providerOptsForPreferred', prov);
-        const tracks = await maClient.albumTracks(entry.item, trackOpts);
-        const rowOpts = prov ? { activeArtistProvider: prov } : {};
-        return tracks.map((i) => maItemToPanelRow(i, rowOpts));
+        const tracks = await maClient.albumTracks(item, trackOpts);
+        const preferStored = !prov || isLibraryLikeProvider(prov);
+        return tracks.map((i) => maItemToPanelRow(i, { preferStoredProvider: preferStored }));
     }
 
     if (entry.type === 'playlist') {
@@ -2960,7 +2994,7 @@ async function loadCurrentBrowseView(opts = {}) {
             hideContainerActionsBar();
         }
         if (isBrowsePageable(entry)) {
-            storeBrowseView(entry.key, {
+            storeBrowseView(browseEntryCacheKey(entry), {
                 title: entry.title,
                 hint: entry.hint || '',
                 items: [],
@@ -2971,7 +3005,7 @@ async function loadCurrentBrowseView(opts = {}) {
             await loadBrowsePage(true);
         } else {
             const items = await fetchBrowseItemsForEntry(entry);
-            storeBrowseView(entry.key, {
+            storeBrowseView(browseEntryCacheKey(entry), {
                 title: entry.title,
                 hint: entry.hint || '',
                 items,
@@ -2997,7 +3031,7 @@ async function loadCurrentBrowseView(opts = {}) {
         console.warn('browse load failed:', err);
         const disconnected = (err.message || '').toLowerCase().includes('ma not connected')
             || (err.message || '').toLowerCase().includes('websocket not connected');
-        storeBrowseView(entry.key, {
+        storeBrowseView(browseEntryCacheKey(entry), {
             title: entry.title,
             hint: '',
             items: disconnected
@@ -3464,7 +3498,7 @@ function renderBrowsePanelNow() {
         .slice(0, 4)
         .map((item) => item.uri || item.item_id || item.title)
         .join('\0');
-    const renderKey = `${entry.key}|${layout}|${items.length}|${view.hasMore ? 1 : 0}|${contentSig}`;
+    const renderKey = `${browseEntryCacheKey(entry)}|${layout}|${items.length}|${view.hasMore ? 1 : 0}|${contentSig}`;
 
     browsePanelTitle.textContent = view.title || entry.title || 'Browse';
     browsePanelHint.textContent = view.hint || '';
@@ -3474,7 +3508,7 @@ function renderBrowsePanelNow() {
 
     const existingRows = Array.from(getBrowseRows());
     const layoutChanged = layout !== state._lastBrowseLayout;
-    const sameEntry = state._lastBrowseRenderKey.startsWith(`${entry.key}|${layout}|`);
+    const sameEntry = state._lastBrowseRenderKey.startsWith(`${browseEntryCacheKey(entry)}|${layout}|`);
 
     // Alpha "list" views re-sort the whole item array on every page load,
     // so new items interleave into the middle rather than appending to the
@@ -3747,9 +3781,7 @@ async function toggleRadioLibrary(item) {
         uiH('closeBrowseRowMenu');
         const entry = getCurrentBrowseEntry();
         if (entry?.key === 'radio') {
-            delete state.browseViews[entry.key];
-            const orderIdx = state._browseViewOrder.indexOf(entry.key);
-            if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+            deleteBrowseViewCache(entry);
             state._lastBrowseRenderKey = '';
             await renderBrowseProviderBar(entry);
             if (isBrowsePageable(entry)) await loadBrowsePage(true);
@@ -3769,9 +3801,7 @@ async function toggleRadioLibrary(item) {
 async function reloadCurrentBrowseView() {
     const entry = getCurrentBrowseEntry();
     if (!entry) return;
-    delete state.browseViews[entry.key];
-    const orderIdx = state._browseViewOrder.indexOf(entry.key);
-    if (orderIdx >= 0) state._browseViewOrder.splice(orderIdx, 1);
+    deleteBrowseViewCache(entry);
     state._lastBrowseRenderKey = '';
     if (isBrowsePageable(entry)) await loadBrowsePage(true);
     else await loadCurrentBrowseView();
@@ -3944,7 +3974,7 @@ async function openBrowseItem(item) {
             return;
         }
         if (mt === 'album') {
-            const activeArtistProvider = getArtistBrowseProvider();
+            const activeArtistProvider = getArtistBrowseProvider() || preferredProvider || null;
             state.browseStack.push({
                 key: item.uri || item.path,
                 title: item.title,
@@ -4074,7 +4104,7 @@ async function playTrackInContext(item, entry, opts = {}) {
     const pref = playback.providerOpts?.preferredProvider;
     const trackUri = uiH('uriForProvider', playback.raw || item.raw || item, pref)
         || item.uri || item.raw?.uri || playback.uri;
-    if (entry?.title && opts.queueOption === 'replace') rememberQueueContext(entry.title);
+    if (entry?.title && (opts.queueOption ?? 'replace') === 'replace') rememberQueueContext(entry.title);
     const isTrackList = entry?.type === 'playlist'
         || entry?.type === 'track_versions'
         || entry?.type === 'similar_tracks';
@@ -4191,7 +4221,7 @@ async function playPodcastShowBrowse(item, opts = {}) {
     const showMedia = playback.media;
     const showUri = playback.uri;
     if (!showUri || !raw) throw new Error('podcast has no uri');
-    if (opts.queueOption === 'replace') rememberQueueContext(item.title);
+    if ((opts.queueOption ?? 'replace') === 'replace') rememberQueueContext(item.title);
     await maClient.ensureReady();
     if (opts.radioMode) {
         await maClient.playMediaWithOption(showMedia || showUri, {
@@ -4237,9 +4267,12 @@ async function executeBrowsePlayback(item, opts = {}) {
         const media = playback.media;
         const uri = playback.uri;
         const providerOpts = playback.providerOpts;
-        if (queueOption === 'replace' && !radioMode
-            && (['artist', 'album', 'playlist', 'podcast', 'genre'].includes(item.mediaType) || item.isRadio)) {
-            rememberQueueContext(item.title);
+        if (queueOption === 'replace' && !radioMode) {
+            if (['artist', 'album', 'playlist', 'podcast', 'genre'].includes(item.mediaType) || item.isRadio) {
+                rememberQueueContext(item.title);
+            } else if (entry?.type === 'podcast') {
+                rememberQueueContext(entry.title);
+            }
         }
         if (item.mediaType === 'track' && item.uri
             && (entry?.type === 'album' || entry?.type === 'playlist' || entry?.type === 'podcast'
@@ -4454,7 +4487,7 @@ async function activateBrowseRow(index) {
             entry._similarFetchLimit = (entry._similarFetchLimit || 20) + 20;
             entry._playlistTracksCache = null;
             entry._similarLastFetchLimit = 0;
-            delete state.browseViews[entry.key];
+            deleteBrowseViewCache(entry);
             await loadCurrentBrowseView();
             return;
         }
@@ -4575,7 +4608,7 @@ function browseBack() {
             state.browseFocusZone = 'list';
         }
         syncSearchInputValue();
-        if (state.browseViews[entry.key]) {
+        if (state.browseViews[browseEntryCacheKey(entry)]) {
             renderBrowsePanel(true);
             const backEntry = getCurrentBrowseEntry();
             if (isAlphaListEntry(backEntry)) {

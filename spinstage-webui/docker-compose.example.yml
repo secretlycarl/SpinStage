@@ -1,0 +1,33 @@
+# SpinStage browser UI — example Compose stack
+#
+# Setup:
+#   cp docker-compose.example.yml docker-compose.yml
+#   # optional: cp config/user-settings.json.example config/user-settings.json && edit
+#   docker compose up -d --build
+#
+# Open: http://<host>:9728/
+#
+# The container only serves the static UI. Your browser talks to Music Assistant
+# directly (ports 8095 + 8927 on the MA host, or HTTPS + /sendspin remotely).
+# Default bridge network is fine — host network is not required.
+
+services:
+  spinstage-webui:
+    build: .
+    container_name: spinstage-webui
+    restart: unless-stopped
+    ports:
+      - "9728:9728"
+    environment:
+      SPINSTAGE_PORT: "9728"
+      # Optional — written to config/user-settings.json on first start if the file
+      # does not exist (skip Connect wizard). Prefer a bind mount in production.
+      # SPINSTAGE_SERVER: "192.168.1.100"
+      # SPINSTAGE_PLAYER: "Living Room Browser"
+      # SPINSTAGE_USERNAME: "your-ma-username"
+      # SPINSTAGE_PASSWORD: "your-ma-password"
+    volumes:
+      # Persist Connect / env-generated credentials across restarts
+      - ./config:/app/config
+    # network_mode: bridge   # default — recommended
+    # Do not expose this UI to the public internet without understanding README Security.

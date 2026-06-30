@@ -1,12 +1,15 @@
 # Creating GitHub Releases
 
-SpinStage ships three download artifacts per version:
+SpinStage ships four download artifacts per version:
 
 | File | Platform |
 |------|----------|
 | `spinstage-webui-<version>.zip` | Browser / PC |
 | `spinstage-<version>.apk` | Android (sideload) |
 | `com.spinstage_<version>_all.ipk` | LG webOS TV |
+| `spinstage-tizen-<version>-beta.zip` | Samsung Tizen TV (**beta** — build & sign locally) |
+
+Tizen has no CI-built `.wgt` (signing is per-developer/TV). The beta zip is source you build on Windows; optional `--wgt` if you attach a signed package manually.
 
 ## One-time: Android signing (required for Release workflow)
 
@@ -60,7 +63,7 @@ Repo → **Settings → Secrets and variables → Actions → New repository sec
    git tag v0.9.9
    git push origin v0.9.9
    ```
-5. GitHub Actions **Release** workflow builds all three artifacts and attaches them to the GitHub Release.
+5. GitHub Actions **Release** workflow builds browser, Android, and webOS artifacts and attaches the Tizen beta source zip to the GitHub Release.
 
 Tag must match `VERSION` (with `v` prefix): `VERSION=0.9.9` → tag `v0.9.9`.
 
@@ -74,7 +77,7 @@ From the repository root:
 VERSION="$(tr -d '\n' < spinstage-webui/VERSION)"
 python3 scripts/sync_public_platforms.py
 
-# Web UI zip
+# Web UI zip + Tizen beta source zip (always)
 python3 scripts/package_release.py --out release-artifacts
 
 # Android (needs keystore.properties)
@@ -86,6 +89,9 @@ cd spinstage-webos && npm run package && cd ..
 python3 scripts/package_release.py --out release-artifacts \
   --apk spinstage-android/dist/spinstage_${VERSION}.apk \
   --ipk "spinstage-webos/com.spinstage_${VERSION}_all.ipk"
+
+# Optional: attach a signed WGT you built on Windows
+# python3 scripts/package_release.py --out release-artifacts --wgt spinstage-tizen/.buildResult/SpinStage.wgt
 ```
 
 Upload everything in `release-artifacts/` to a new GitHub Release.

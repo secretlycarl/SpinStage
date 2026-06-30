@@ -3,7 +3,7 @@
  * Cross-module callbacks use ui/handlers.js (wired in spinstage-app.js).
  */
 import { state } from '../state.js';
-import { IS_WEBOS } from '../constants.js';
+import { IS_TV_REMOTE } from '../constants.js';
 import {
     mainBody,
     navBtn,
@@ -378,7 +378,7 @@ function updateNavGenresMenuFocus() {
             state.navGenreMenuEls.forEach((el, i) => {
                 el.classList.toggle('focused', i === state.navGenreFocusIndex);
             });
-            if (!IS_WEBOS) state.navGenreMenuEls[state.navGenreFocusIndex]?.focus();
+            if (!IS_TV_REMOTE) state.navGenreMenuEls[state.navGenreFocusIndex]?.focus();
         }
 
 function moveNavGenresMenuFocus(delta) {
@@ -729,7 +729,7 @@ function updateNavMenuFocus() {
             navMenuItems.forEach((el, i) => {
                 el.classList.toggle('focused', i === state.navMenuFocusIndex);
             });
-            if (!IS_WEBOS) navMenuItems[state.navMenuFocusIndex]?.focus();
+            if (!IS_TV_REMOTE) navMenuItems[state.navMenuFocusIndex]?.focus();
         }
 
 function moveNavMenuFocus(delta) {

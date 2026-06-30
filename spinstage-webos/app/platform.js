@@ -1,5 +1,5 @@
 import {
-  IS_CAPACITOR, IS_ANDROID, IS_WEBOS, HAS_TOUCH_HARDWARE,
+  IS_CAPACITOR, IS_ANDROID, IS_WEBOS, IS_TIZEN, HAS_TOUCH_HARDWARE,
 } from './constants.js';
 import {
   mainBody,
@@ -33,7 +33,7 @@ export function isWebUi() {
 }
 
 export function isBrowserUi() {
-    return !IS_CAPACITOR && !IS_WEBOS && typeof webOS === 'undefined';
+    return !IS_CAPACITOR && !IS_WEBOS && !IS_TIZEN && typeof webOS === 'undefined';
 }
 
 export function applyUiScalingClasses() {

@@ -1,6 +1,6 @@
 {
   "name": "spinstage-android",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SpinStage for Android (Capacitor wrapper)",
   "scripts": {
     "postinstall": "node scripts/apply-android-patches.mjs",

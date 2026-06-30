@@ -18,7 +18,9 @@ WEBOS_APPINFO = REPO / "spinstage-webos" / "appinfo.json"
 PACKAGE_JSONS = (
     REPO / "spinstage-android" / "package.json",
     REPO / "spinstage-webos" / "package.json",
+    REPO / "spinstage-tizen" / "package.json",
 )
+TIZEN_CONFIG = REPO / "spinstage-tizen" / "config.xml"
 
 
 def read_version() -> str:
@@ -51,6 +53,15 @@ def main() -> int:
             )
     else:
         errors.append(f"Missing {WEBOS_APPINFO.relative_to(REPO)}")
+
+    if TIZEN_CONFIG.is_file():
+        text = TIZEN_CONFIG.read_text(encoding="utf-8")
+        version_match = re.search(r'<widget[^>]*\sversion="([^"]+)"', text)
+        if not version_match or version_match.group(1) != version:
+            found = version_match.group(1) if version_match else "<missing>"
+            errors.append(f"{TIZEN_CONFIG.relative_to(REPO)} version {found!r} != {version!r}")
+    else:
+        errors.append(f"Missing {TIZEN_CONFIG.relative_to(REPO)}")
 
     if ANDROID_GRADLE.is_file():
         gradle = ANDROID_GRADLE.read_text(encoding="utf-8")

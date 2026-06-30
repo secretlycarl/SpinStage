@@ -3,9 +3,9 @@
   <img src="assets/repo-logo.svg" alt="SpinStage" width="320">
 </p>
 
-Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, and LG webOS. Demo video will be added soon, screenshots below.
+Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, LG webOS, and Samsung Tizen (beta). Demo video will be added soon, screenshots below.
 
-> **Unofficial client.** SpinStage is a third-party homelab app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
+> **Unofficial client.** SpinStage is a third-party app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
 
 > **AI-built code.** Developed using Cursor (various models). I made a lot of icons, designed the UI, came up with visualizer concepts, and have spent weeks ideating and testing, but I'm a designer not a real developer. Thankfully the security implications of the app are pretty limited; the only third-party integration is for the Listen Party QR code that MA already uses. See the [Security](#security) section for more info. You are responsible for securing your traffic if using the app remotely.
 
@@ -26,22 +26,23 @@ Overall I'd say this initial release is about 75% where i want the project to be
 | `spinstage-webui-*.zip` | Browser / PC | Unzip, `cd spinstage-webui`, run `./run.sh --open` (or `run.bat` on Windows) |
 | `spinstage-*.apk` | Android | Sideload the APK (`adb install -r …` or copy to device and open) |
 | `com.spinstage_*_all.ipk` | LG webOS TV | Install with [`ares-install`](https://webostv.developer.lge.com/develop/tools/cli-introduction) or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) (Developer Mode on the TV either way) |
+| `spinstage-tizen-*-beta.zip` | Samsung Tizen TV (**beta**) | Source + build on Windows — see [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md) (not pre-built; you sign & sideload) |
 
 Each release matches a tagged version (see `spinstage-webui/VERSION` in the repo). **No credentials are bundled** in release downloads – use the in-app Connect screen on first launch.
 
-**Alternatively:** clone this repo and [build from source](#build-from-source) (below). One repo, all three platforms; releases are just pre-built copies so you don't need Node, Gradle, ares-cli, or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) unless you want them.
+**Alternatively:** clone this repo and [build from source](#build-from-source) (below). One repo, all platforms; releases are pre-built copies for browser/Android/webOS so you don't need Node, Gradle, ares-cli, or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) unless you want them. Tizen beta always requires local build/signing on your PC.
 
 ## How it works
 
 SpinStage is just the **client**. Music lives in Music Assistant – you need MA running somewhere reachable, Sendspin enabled, an MA login, and to configure the **player** in MA (may need to uncheck the "hide player" option).
 
-Real source code is **`spinstage-webui/`**. Android and webOS folders are copies synced from that.
+Real source code is **`spinstage-webui/`**. Android, webOS, and Tizen folders are copies synced from that.
 
 **Tested with:** Music Assistant 2.9.x + Sendspin. Other MA versions may work; file an issue with your MA version if something breaks.
 
 ## Features
 
-**Player UI** – cover art, accent colors from the track, blurred bg crossfade, optional audio visualizer, controls that hide until you need them.
+**Player UI** – cover art, accent colors from the art, optional audio visualizer, controls.
 
 **Browse & search** – MA library (artists, albums, playlists, podcasts, radio, etc.). Search with type filters. Pick which providers to search. **Go to** from now playing jumps straight to artist/album/etc.
 
@@ -49,7 +50,7 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 **Device Sync** – see MA players, group sync, stereo pair + offset tuning, per-player volume in a group.
 
-**Separation of personal/public Spotify content in search** – Not yet a feature on MA, but you can do it here
+**Split personal/public Spotify content in search** – Not yet a feature on MA, but you can do it here
 
 **10+ visualizers** – Single, Double, Shuffle, and Cycle modes
 
@@ -57,7 +58,7 @@ Real source code is **`spinstage-webui/`**. Android and webOS folders are copies
 
 **Queue** – reorder, autoplay, save queue as MA playlist.
 
-It has ways to interact with most MA browsing / playback / player functions. More to come as requested, I only use so many features.
+It has ways to interact with most MA browsing / playback / player functions. More to come as requested.
 
 ## Screenshots
 
@@ -89,6 +90,8 @@ cd spinstage-webui
 
 Connect once in the app (server, player name, MA username/password). See [spinstage-webui/INSTALL.md](spinstage-webui/INSTALL.md).
 
+**Docker:** run the web UI in a container — [Docker](#docker) below.
+
 ### Android
 
 Install the release `.apk` on your device. Enable install from unknown sources if prompted. Open SpinStage → Connect.
@@ -111,6 +114,14 @@ Pair the TV (same Developer Mode setup), then drag/drop the `.ipk` onto Dev Mana
 
 → [spinstage-webos/INSTALL.md](spinstage-webos/INSTALL.md)
 
+### Samsung Tizen TV (beta)
+
+**Not recommended for most users.** Tizen setup is complicated (Samsung dev account, Tizen Studio, per-TV signing certificates, CLI install). The port is **less stable than webOS** — audio and visual quirks on some TVs. For a Samsung living-room TV, sideloading the **Android APK on an Android TV stick/box** is usually simpler.
+
+If you still want Tizen: download `spinstage-tizen-<version>-beta.zip` from [Releases](https://github.com/secretlycarl/SpinStage/releases) (or use `spinstage-tizen/` from this repo), then follow the full guide:
+
+→ [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md)
+
 ## Build from source
 
 Clone the repo if you want the latest `main`, custom builds, or to contribute. Prerequisites and full steps are in each platform's INSTALL.
@@ -125,6 +136,65 @@ cd spinstage-webui
 First run may offer to create `config/user-settings.json`, or use the in-app Connect screen.
 
 → [spinstage-webui/INSTALL.md](spinstage-webui/INSTALL.md)
+
+### Docker
+
+Run the browser UI as a container on your host. Example files live in `spinstage-webui/`:
+
+- `Dockerfile`
+- `docker-compose.example.yml` — copy to `docker-compose.yml` and edit
+
+```bash
+cd spinstage-webui
+cp docker-compose.example.yml docker-compose.yml
+docker compose up -d --build
+```
+
+Open `http://<docker-host>:9728/` from any device on your LAN.
+
+#### Ports
+
+| Port | Where | Purpose |
+|------|--------|---------|
+| **9728** | Publish on the container | SpinStage web UI (`server.py`) |
+| **8095** | Music Assistant host (not the SpinStage container) | MA HTTP API, album art, browse |
+| **8927** | Music Assistant host (not the SpinStage container) | Sendspin WebSocket |
+
+After the page loads, the browser connects straight to MA/Sendspin — traffic does **not** route through the Docker container. Make sure the **client device** (PC, phone, tablet) can reach MA on those ports, or use your HTTPS/`/sendspin` tunnel — see [Remote access](#remote-access).
+
+#### Network mode
+
+Use the default **bridge** network (`docker compose` default). **`network_mode: host` is not required** and usually isn't what you want unless you're debugging something specific on the Docker host itself.
+
+If MA runs in another container on the same Compose host, put both on a shared user-defined network and point SpinStage Connect at MA's service name or LAN IP — the browser still needs a hostname/IP it can resolve, not Docker-internal DNS, unless you're opening the UI on the same machine that runs the browser *and* you've set up routing accordingly.
+
+#### Persistent config
+
+Mount `./config` (as in the example compose) so `user-settings.json` survives restarts. Either:
+
+1. **In-app Connect** (credentials land in browser `localStorage`; optional file via mount), or  
+2. **Bind-mount** `config/user-settings.json` on the host before first start, or  
+3. **Environment variables** in compose — `SPINSTAGE_SERVER`, `SPINSTAGE_PLAYER`, `SPINSTAGE_USERNAME`, `SPINSTAGE_PASSWORD` — written once on first boot if no file exists yet.
+
+Do not commit or publish `config/user-settings.json`. Same LAN exposure rules as bare `server.py` apply — see [Security](#security).
+
+#### Example compose
+
+```yaml
+services:
+  spinstage-webui:
+    build: .
+    container_name: spinstage-webui
+    restart: unless-stopped
+    ports:
+      - "9728:9728"
+    environment:
+      SPINSTAGE_PORT: "9728"
+    volumes:
+      - ./config:/app/config
+```
+
+Full commented example: [spinstage-webui/docker-compose.example.yml](spinstage-webui/docker-compose.example.yml).
 
 ### Android
 
@@ -159,6 +229,18 @@ Optional: pre-fill `config/user-settings.json` before packaging to skip setup on
 
 → [spinstage-webos/INSTALL.md](spinstage-webos/INSTALL.md)
 
+### Samsung Tizen TV (beta)
+
+Windows + [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html) required. TV in Developer Mode; you create a signing certificate bound to your TV.
+
+```powershell
+cd spinstage-tizen
+.\build.ps1
+# then sdb connect + tizen install — see INSTALL.md
+```
+
+→ [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md)
+
 ## Skip setup (optional)
 
 Copy `user-settings.json.example` → `config/user-settings.json` (gitignored):
@@ -177,6 +259,7 @@ Copy `user-settings.json.example` → `config/user-settings.json` (gitignored):
 | Browser | `spinstage-webui/config/user-settings.json` | `python3 scripts/configure_defaults.py` |
 | Android | `spinstage-android/config/user-settings.json` | `python scripts/configure_defaults.py` |
 | webOS | `spinstage-webos/config/user-settings.json` | `python scripts/configure_defaults.py` |
+| Tizen (beta) | `spinstage-tizen/config/user-settings.json` | `python scripts/configure_defaults.py` |
 
 Or env vars: `SPINSTAGE_SERVER`, `SPINSTAGE_PLAYER`, `SPINSTAGE_USERNAME`, `SPINSTAGE_PASSWORD`.
 
@@ -240,7 +323,7 @@ LAN: open 8927 + 8095 on the MA box. Remote via tunnel: router doesn't need port
 
 ## Security
 
-SpinStage is a homelab client for [Music Assistant](https://music-assistant.io/) + [Sendspin](https://github.com/music-assistant/sendspin). I use it on my own network; it is not meant to be a public-facing service on its own.
+SpinStage is a client for [Music Assistant](https://music-assistant.io/) + [Sendspin](https://github.com/music-assistant/sendspin). I use it on my own network; it is not meant to be a public-facing service on its own.
 
 See the [disclaimer at the top](#spinstage) – SpinStage is an unofficial third-party client, not affiliated with Music Assistant.
 
@@ -297,7 +380,7 @@ Open a GitHub issue (minimal detail in public) or use private reporting if you'v
 
 **Change code in `spinstage-webui/` only.**
 
-`spinstage-android/www/`, the Gradle assets copy, and `spinstage-webos/` are **sync output**. Edit those directly and your fix disappears next sync.
+`spinstage-android/www/`, the Gradle assets copy, `spinstage-webos/`, and `spinstage-tizen/` are **sync output**. Edit those directly and your fix disappears next sync.
 
 ```bash
 python3 scripts/sync_public_platforms.py
@@ -320,8 +403,8 @@ Commit the webui change **and** the synced trees together.
 |-----------------|---------------------|
 | `spinstage-webui/VERSION` | Canonical semver |
 | `spinstage-android/android/app/build.gradle` | `versionName` + `versionCode` (formula in `scripts/version_utils.py`) |
-| `spinstage-android/package.json`, `spinstage-webos/package.json`, `spinstage-webos/appinfo.json` | Same semver as `VERSION` |
-| Platform trees (`www/`, webOS app/) | `python3 scripts/sync_public_platforms.py` |
+| `spinstage-android/package.json`, `spinstage-webos/package.json`, `spinstage-webos/appinfo.json`, `spinstage-tizen/package.json`, `spinstage-tizen/config.xml` | Same semver as `VERSION` |
+| Platform trees (`www/`, webOS / Tizen app/) | `python3 scripts/sync_public_platforms.py` |
 
 ### Don't commit secrets
 
@@ -338,6 +421,7 @@ Run `python3 scripts/pre_push_check.py` before push.
 - **`sendspin-lib.js`** – upstream Sendspin client; mention in issue/PR if you patch it
 - **Android-only CSS:** `scripts/sync-assets/platform-android.css`
 - **webOS TV CSS:** `spinstage-webui/styles/platform-webos.css`
+- **Tizen TV CSS:** `spinstage-webui/styles/platform-tizen.css`
 
 ### Release checklist
 
@@ -355,7 +439,7 @@ Scripts live in **`scripts/`** (sync, pre-push check, user-settings helpers). Op
 
 ## Credits & related projects
 
-SpinStage evolved from the webOS-focused [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) player (thanks zonya). It grew into a shared modular web UI (`spinstage-webui/`) with synced Android and webOS shells.
+SpinStage evolved from the webOS-focused [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) player (thanks zonya). It grew into a shared modular web UI (`spinstage-webui/`) with synced Android, webOS, and Tizen (beta) shells.
 
 Other unofficial Music Assistant clients worth knowing about:
 

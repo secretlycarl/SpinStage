@@ -5,7 +5,7 @@
 import { state } from '../state.js';
 import {
     IS_ANDROID,
-    IS_WEBOS,
+    IS_TV_REMOTE,
     IS_CAPACITOR,
     UI_HIDE_MS,
 } from '../constants.js';
@@ -207,11 +207,11 @@ function resetNavButtonFocus() {
 }
 
 function panelKeyboardFocusActive() {
-    return IS_WEBOS || state.panelInputMode === 'keyboard';
+    return IS_TV_REMOTE || state.panelInputMode === 'keyboard';
 }
 
 function setPanelInputMode(mode) {
-    const next = IS_WEBOS ? 'keyboard' : mode;
+    const next = IS_TV_REMOTE ? 'keyboard' : mode;
     if (state.panelInputMode === next) return;
     state.panelInputMode = next;
     if (isPanelOpen()) updatePanelFocus();
@@ -222,7 +222,7 @@ function syncPanelInputModeForOpen() {
 }
 
 function focusPanelTarget(el) {
-    if (!el || IS_ANDROID || IS_WEBOS || !panelKeyboardFocusActive()) return;
+    if (!el || IS_ANDROID || IS_TV_REMOTE || !panelKeyboardFocusActive()) return;
     el.focus({ preventScroll: true });
 }
 
@@ -239,7 +239,7 @@ function clearKeyboardFocusClasses() {
 }
 
 function bindMouseHoverHighlights() {
-    if (IS_CAPACITOR || IS_WEBOS) return;
+    if (IS_CAPACITOR || IS_TV_REMOTE) return;
     const onHoverStart = (el) => {
         clearKeyboardFocusClasses();
         clearMouseHover();
@@ -260,7 +260,7 @@ function bindMouseHoverHighlights() {
 }
 
 function bindPanelPointerMode() {
-    if (IS_WEBOS) return;
+    if (IS_TV_REMOTE) return;
     const markPointer = () => {
         state.lastFocusInput = 'pointer';
         if (isPanelOpen()) setPanelInputMode('pointer');
@@ -285,7 +285,7 @@ function updateFocus() {
     focusableControls.forEach((el, i) => {
         const focused = i === state.focusIndex && !el.hidden;
         el.classList.toggle('focused', focused);
-        if (focused && document.activeElement !== el && !IS_ANDROID && !IS_WEBOS) {
+        if (focused && document.activeElement !== el && !IS_ANDROID && !IS_TV_REMOTE) {
             el.focus({ preventScroll: true });
         }
     });
@@ -311,7 +311,7 @@ function syncWebOsFocusVisual() {
     if (document.activeElement === progressSlider) progressSlider?.blur();
     const focusEl = (el) => {
         el?.classList.add('focused');
-        if (!IS_ANDROID && !IS_WEBOS) el?.focus({ preventScroll: true });
+        if (!IS_ANDROID && !IS_TV_REMOTE) el?.focus({ preventScroll: true });
     };
     if (state.uiFocusZone === 'progress' && isProgressFocusAvailable()) {
         progressSlider?.classList.add('focused');
@@ -1542,7 +1542,7 @@ function hideUI() {
     state.playbackFocusIndex = 2;
     uiH('invalidateIdleProgressVisibility');
     uiH('syncIdleProgressVisibility');
-    if (IS_WEBOS) {
+    if (IS_TV_REMOTE) {
         requestAnimationFrame(() => {
             uiH('invalidateIdleProgressVisibility');
             uiH('syncIdleProgressVisibility');

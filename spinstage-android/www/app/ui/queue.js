@@ -792,6 +792,11 @@ function getQueueContextLabel(queue) {
     const currentMt = current ? uiH('inferMediaType', current) : '';
     if (currentMt === 'audiobook' || currentMt === 'audiobook_chapter') return '';
 
+    if (current) {
+        const fromCurrent = queueContextLabelFromItem(current);
+        if (fromCurrent) return fromCurrent;
+    }
+
     const enqueued = Array.isArray(queue.enqueued_media_items) ? queue.enqueued_media_items : [];
     for (let i = enqueued.length - 1; i >= 0; i--) {
         const label = queueContextLabelFromItem(enqueued[i]);

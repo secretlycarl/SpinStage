@@ -64,6 +64,7 @@ export const state = {
   seekAuthorityMs: 0,
   seekAuthorityUntil: 0,
   lastSendspinStreamGen: 0,
+  lastSendspinTrackKey: '',
   remoteSeekHoldDelay: null,
   remoteSeekHoldIv: null,
   remoteSeekActive: false,

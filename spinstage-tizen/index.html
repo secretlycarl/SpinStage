@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' ws: wss: http: https:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; base-uri 'self'; form-action 'self';">
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/platform-browser.css">
+    <link rel="stylesheet" href="styles/platform-webos.css">
+    <link rel="stylesheet" href="styles/platform-tizen.css">
+</head>
+<body id="main-body">
+
+    <div id="status-bar" aria-live="polite">connecting…</div>
+
+    <div id="top-bar">
+        <button type="button" class="top-trigger" id="nav-trigger" tabindex="0" aria-label="Go to Artist or Album" hidden>
+            <img class="top-icon" src="icons/go-to.svg" alt="">
+        </button>
+        <button type="button" class="top-trigger" id="browse-trigger" tabindex="0" aria-label="Browse">
+            <img class="top-icon" src="icons/discover.svg" alt="">
+        </button>
+        <button type="button" class="top-trigger" id="queue-trigger" tabindex="0" aria-label="Queue">
+            <img class="top-icon" src="icons/queue.svg" alt="">
+        </button>
+        <button type="button" class="top-trigger" id="volume-trigger" tabindex="0" aria-label="Volume">
+            <img class="top-icon" id="volume-trigger-icon" src="icons/volume.svg" alt="">
+        </button>
+        <button type="button" class="top-trigger" id="players-trigger" tabindex="0" aria-label="Device Sync">
+            <img class="top-icon" src="icons/group-sync.svg" alt="">
+        </button>
+        <button type="button" class="top-trigger" id="settings-trigger" tabindex="0" aria-label="Settings">
+            <img class="top-icon" src="icons/settings.svg" alt="">
+        </button>
+    </div>
+
+    <div id="browse-panel" class="media-panel" aria-hidden="true">
+        <div class="panel-header">
+            <button type="button" id="browse-panel-back" class="panel-back-btn" hidden aria-label="Back one level">
+                <img src="icons/back.svg" alt="" aria-hidden="true">
+            </button>
+            <h2 id="browse-panel-title">Browse</h2>
+            <span id="browse-panel-hint" class="panel-hint"></span>
+            <div id="browse-artist-providers" class="artist-provider-bar" style="display:none" aria-hidden="true"></div>
+            <div id="browse-alpha-view-bar" class="artist-provider-bar browse-alpha-view-bar" style="display:none" aria-hidden="true"></div>
+            <div id="browse-container-actions" class="browse-container-actions" style="display:none" aria-hidden="true"></div>
+            <input type="text" id="browse-search-input" class="browse-search-input" placeholder="Search your library…" style="display:none">
+            <div id="browse-search-filters" class="browse-search-filters" style="display:none"></div>
+            <button type="button" id="browse-search-input-toggle" class="browse-search-input-toggle" hidden aria-expanded="true" aria-label="Hide filter chips">
+                <img class="browse-search-input-toggle-icon" src="icons/back.svg" alt="" aria-hidden="true">
+            </button>
+        </div>
+        <div id="browse-list" class="panel-list"></div>
+    </div>
+
+    <div id="queue-panel" class="media-panel" aria-hidden="true">
+        <div class="panel-header">
+            <h2 id="queue-panel-title">Queue</h2>
+            <span class="panel-hint"></span>
+            <div id="queue-sync-actions" class="queue-sync-actions" aria-hidden="true">
+                <button type="button" class="search-filter-chip container-action-chip" id="queue-clear-btn" disabled>
+                    <img src="icons/clear-queue.svg" alt=""><span>Clear queue</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="queue-save-playlist-btn" hidden>
+                    <img src="icons/playlists.svg" alt=""><span id="queue-save-playlist-label">Save as Playlist</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="queue-autoplay-btn" hidden>
+                    <img id="queue-autoplay-icon" src="icons/autoplay-off.svg" alt=""><span id="queue-autoplay-label">Enable Autoplay</span>
+                </button>
+            </div>
+            <input type="text" id="queue-save-playlist-input" class="browse-search-input" placeholder="Playlist name…" style="display:none">
+        </div>
+        <div id="queue-list" class="panel-list"></div>
+    </div>
+
+    <div id="players-panel" class="media-panel" aria-hidden="true">
+        <div class="panel-header">
+            <h2 id="players-panel-title">Device Sync</h2>
+            <span class="panel-hint" id="players-panel-hint">Tap a player to transfer queue · Check players to sync</span>
+            <div id="players-sync-actions" class="players-sync-actions" aria-hidden="true">
+                <button type="button" class="search-filter-chip container-action-chip" id="players-sync-btn" disabled>
+                    <img src="icons/group-sync.svg" alt=""><span id="players-sync-label">Sync selected</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-stereo-btn" hidden disabled>
+                    <img src="icons/stereo-pair.svg" alt=""><span>Stereo Pair</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-stereo-lead-btn" hidden disabled>
+                    <img src="icons/lead-stereo.svg" alt=""><span>Stereo + Lead Here</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-join-btn" hidden>
+                    <img src="icons/group-sync.svg" alt=""><span>Join group</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-refresh-btn" hidden>
+                    <img src="icons/refresh.svg" alt=""><span>Refresh sync</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-reset-offsets-btn" hidden>
+                    <img src="icons/close.svg" alt=""><span>Reset Offsets</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-leave-btn" hidden>
+                    <img src="icons/leave-group.svg" alt=""><span>Leave group</span>
+                </button>
+                <button type="button" class="search-filter-chip container-action-chip" id="players-split-btn" hidden>
+                    <img src="icons/split-group.svg" alt=""><span>Split group</span>
+                </button>
+            </div>
+        </div>
+        <div id="players-list" class="panel-list"></div>
+    </div>
+
+    <div id="details-panel" class="media-panel" aria-hidden="true">
+        <div class="panel-header">
+            <button type="button" id="details-panel-back" class="panel-back-btn" aria-label="Back">
+                <img src="icons/back.svg" alt="" aria-hidden="true">
+            </button>
+            <h2 id="details-panel-title">Details</h2>
+            <span id="details-panel-hint" class="panel-hint"></span>
+            <div id="details-actions" class="browse-container-actions" style="display:none" aria-hidden="true"></div>
+        </div>
+        <div id="details-list" class="panel-list"></div>
+    </div>
+
+    <div id="queue-row-menu" class="queue-row-menu" aria-hidden="true"></div>
+    <div id="browse-row-menu" class="browse-row-menu" aria-hidden="true"></div>
+    <div id="players-row-menu" class="players-row-menu" aria-hidden="true"></div>
+    <div id="browse-provider-menu" class="search-provider-menu" aria-hidden="true"></div>
+    <div id="nav-menu" aria-hidden="true">
+        <button type="button" class="settings-menu-item" id="nav-go-artist">Go to Artist</button>
+        <button type="button" class="settings-menu-item" id="nav-go-album">Go to Album</button>
+        <button type="button" class="settings-menu-item" id="nav-go-podcast">Go to Podcast</button>
+        <button type="button" class="settings-menu-item" id="nav-go-playlist">Go to Playlist</button>
+        <button type="button" class="settings-menu-item" id="nav-go-other-versions">Other Versions</button>
+        <button type="button" class="settings-menu-item" id="nav-go-similar-tracks">Similar Tracks</button>
+        <button type="button" class="settings-menu-item" id="nav-go-genres">Genres</button>
+        <button type="button" class="settings-menu-item" id="nav-details">Details</button>
+        <button type="button" class="settings-menu-item" id="nav-close">Close Menu</button>
+    </div>
+    <div id="nav-genres-menu" aria-hidden="true">
+        <div id="nav-genres-list"></div>
+        <button type="button" class="settings-menu-item" id="nav-genres-close">Back</button>
+    </div>
+    <div id="volume-menu" aria-hidden="true">
+        <div class="volume-menu-panel" id="volume-menu-panel">
+            <div id="volume-group-section" hidden>
+                <div id="volume-member-sliders"></div>
+            </div>
+            <div class="volume-slider-block" data-volume-target="local" id="volume-local-section">
+                <div class="volume-menu-header">
+                    <span id="volume-local-label">Volume</span>
+                    <span class="volume-menu-value" id="volume-value">—</span>
+                </div>
+                <div class="volume-slider-wrap">
+                    <input type="range" id="volume-slider" class="volume-range" min="0" max="100" value="50" aria-label="Volume level">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="settings-menu-item" id="volume-close">Close</button>
+    </div>
+    <div id="art-display-menu" aria-hidden="true">
+        <div id="art-display-list"></div>
+        <button type="button" class="settings-menu-item" id="art-display-close">Back</button>
+    </div>
+    <div id="eq-presets-menu" aria-hidden="true">
+        <div id="eq-presets-list"></div>
+        <button type="button" class="settings-menu-item" id="eq-presets-close">Back</button>
+    </div>
+    <div id="viz-modes-menu" aria-hidden="true">
+        <div id="viz-modes-list"></div>
+        <button type="button" class="settings-menu-item" id="viz-modes-close">Back</button>
+    </div>
+    <div id="settings-menu" aria-hidden="true">
+        <button type="button" class="settings-menu-item" id="menu-guest-access">Guest DJ</button>
+        <button type="button" class="settings-menu-item" id="menu-art-display">Art Display</button>
+        <button type="button" class="settings-menu-item" id="menu-show-lyrics">
+            <span>Show Lyrics</span>
+            <span class="menu-check" id="show-lyrics-check">✓</span>
+        </button>
+        <button type="button" class="settings-menu-item" id="menu-fullscreen" hidden>
+            <span>Fullscreen</span>
+            <span class="menu-check" id="fullscreen-check">✓</span>
+        </button>
+        <button type="button" class="settings-menu-item" id="menu-disablevisualizer">
+            <span>Disable Visualizer</span>
+            <span class="menu-check" id="disablevisualizer-check">✓</span>
+        </button>
+        <button type="button" class="settings-menu-item" id="menu-viz-modes">Visualizer</button>
+        <div class="settings-slider-block" id="menu-viz-resolution-row">
+            <div class="volume-menu-header">
+                <span id="viz-resolution-label">Bar resolution</span>
+                <span class="volume-menu-value" id="viz-bar-count-value">37</span>
+            </div>
+            <div class="volume-slider-wrap">
+                <input type="range" id="viz-bar-count-slider" class="volume-range" min="7" max="129" step="2" value="37" aria-label="Visualizer resolution">
+            </div>
+        </div>
+        <div class="settings-slider-block" id="menu-viz-fps-row">
+            <div class="volume-menu-header">
+                <span>Visualizer FPS</span>
+                <span class="volume-menu-value" id="viz-fps-value">30</span>
+            </div>
+            <div class="volume-slider-wrap">
+                <input type="range" id="viz-fps-slider" class="volume-range" min="0" max="6" step="1" value="2" aria-label="Visualizer FPS">
+            </div>
+        </div>
+        <button type="button" class="settings-menu-item" id="menu-eq-presets">EQ Presets</button>
+        <button type="button" class="settings-menu-item" id="menu-switch-info" hidden>
+            <span>Switch Info</span>
+            <span class="menu-check" id="switch-info-check">✓</span>
+        </button>
+        <button type="button" class="settings-menu-item" id="menu-showconnection">
+            <span>Show Connection</span>
+            <span class="menu-check" id="showconnection-check">✓</span>
+        </button>
+        <button type="button" class="settings-menu-item" id="menu-setup">Setup</button>
+        <button type="button" class="settings-menu-item" id="menu-close">Close Menu</button>
+    </div>
+    <div id="guest-access-overlay" class="media-panel" aria-hidden="true">
+        <div class="panel-header">
+            <h2 id="guest-access-title">Guest DJ</h2>
+        </div>
+        <div class="guest-access-body">
+            <div class="guest-access-content">
+                <img id="guest-qr-img" alt="Guest DJ QR code" hidden>
+                <p id="guest-access-tagline" class="guest-access-tagline" hidden>Scan to join!</p>
+                <p id="guest-access-message" class="guest-access-message"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="setup-overlay" class="setup-panel" aria-hidden="true">
+        <div class="setup-panel-inner">
+            <div class="panel-header setup-panel-header">
+                <h2 id="setup-title">Connect to Music Assistant</h2>
+                <button type="button" id="close-setup" class="setup-close-btn" aria-label="Close setup" hidden>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="setup-body" id="setup-scroll">
+                <p class="setup-lead">Use your Music Assistant login.</p>
+                <form id="setup-form" class="setup-form" autocomplete="on">
+                    <label class="setup-field">
+                        <span class="setup-label">Server</span>
+                        <input type="text" id="input-ip" name="server" placeholder="192.168.1.100 or music.example.com" autocomplete="url" inputmode="url">
+                        <span class="setup-field-hint">MA Base URL from Settings → About (IP or hostname)</span>
+                    </label>
+                    <label class="setup-field">
+                        <span class="setup-label">Player name</span>
+                        <input type="text" id="input-name" name="player" placeholder="e.g. Cinema TV" autocomplete="off">
+                        <span class="setup-field-hint">Make sure the &quot;Hide&quot; option is unchecked in MA Server → Settings → Players → Configure Player.</span>
+                    </label>
+                    <label class="setup-field">
+                        <span class="setup-label">Username</span>
+                        <input type="text" id="input-username" name="username" placeholder="MA account username" autocomplete="username">
+                    </label>
+                    <label class="setup-field">
+                        <span class="setup-label">Password</span>
+                        <input type="password" id="input-password" name="password" placeholder="MA account password" autocomplete="current-password">
+                    </label>
+                    <p id="setup-error" class="setup-error" hidden></p>
+                    <button type="submit" id="setup-connect" class="setup-connect-btn">Connect</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="bg-stack">
+        <div id="bg-overlay-a" class="bg-layer visible"></div>
+        <div id="bg-overlay-b" class="bg-layer"></div>
+        <div id="viz-wrap">
+            <canvas id="viz-canvas" aria-hidden="true"></canvas>
+        </div>
+        <div id="bg-vignette"></div>
+    </div>
+
+    <div id="player-stage">
+        <div class="cover-wrapper">
+            <div id="loader" style="font-size: 6rem; display: flex; justify-content: center; align-items: center; height: 100%;">💿</div>
+            <img id="cover-art" alt="">
+        </div>
+        <div class="info">
+            <h1 id="title">
+                <span class="np-marquee-viewport">
+                    <span id="title-text" class="np-marquee-track">Ready</span>
+                </span>
+            </h1>
+            <h2 id="artist">
+                <span class="np-marquee-viewport">
+                    <span id="artist-text" class="np-marquee-track">SpinStage</span>
+                </span>
+            </h2>
+            <p id="album-line" hidden>
+                <span class="np-marquee-viewport">
+                    <span id="album-text" class="np-marquee-track"></span>
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <div class="progress-wrapper">
+        <span class="time-label" id="time-current">0:00</span>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+            <div id="progress-thumb" aria-hidden="true"></div>
+            <input type="range" id="progress-slider" min="0" max="1000" value="0" aria-label="Playback position" tabindex="0">
+        </div>
+        <span class="time-label" id="time-total">0:00</span>
+    </div>
+
+    <div id="idle-progress" aria-hidden="true">
+        <div id="idle-progress-bar"></div>
+    </div>
+
+    <div id="lyrics-panel" hidden aria-hidden="true">
+        <div id="lyrics-scroll">
+            <p id="lyrics-status" class="lyrics-status" hidden>Loading lyrics…</p>
+            <div id="lyrics-lines"></div>
+        </div>
+    </div>
+
+    <div id="controls-vignette" aria-hidden="true"></div>
+
+    <div id="controls-container">
+        <button type="button" class="btn btn-sm" id="shuffle-btn" tabindex="0" aria-label="Shuffle">
+            <img class="btn-icon" src="icons/shuffle_inactive.svg" alt="">
+        </button>
+        <button type="button" class="btn" id="prev-btn" tabindex="0" aria-label="Previous">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button type="button" class="btn btn-play" id="play-btn" tabindex="0" aria-label="Play Pause">
+            <svg id="play-pause-svg" viewBox="0 0 24 24"><path id="play-path" d="M8 5v14l11-7z"/></svg>
+            <span class="play-btn-loading" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="btn" id="next-btn" tabindex="0" aria-label="Next">
+            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6zm9-12h2v12h-2z"/></svg>
+        </button>
+        <button type="button" class="btn btn-sm" id="repeat-btn" tabindex="0" aria-label="Repeat">
+            <img class="btn-icon" src="icons/norepeat.svg" alt="">
+        </button>
+    </div>
+
+
+    <script type="module" src="./app/main.js"></script>
+</body>
+</html>
