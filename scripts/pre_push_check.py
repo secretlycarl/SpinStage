@@ -167,7 +167,7 @@ def should_compare_runtime_file(root: Path, rel_posix: str) -> bool:
     label = _platform_root_label(root)
     if label == "spinstage-webos" and rel_posix in {"app/constants.js", "app/platform.js"}:
         return False
-    if label == "spinstage-tizen" and rel_posix in {"app/constants.js", "app/platform.js", "index.html"}:
+    if label == "spinstage-tizen-beta" and rel_posix in {"app/constants.js", "app/platform.js", "index.html"}:
         return False
     if rel_posix == "index.html" and label.startswith("spinstage-android/"):
         return False
@@ -195,27 +195,27 @@ def check_webos_runtime_patches() -> list[str]:
 
 def check_tizen_runtime_patches() -> list[str]:
     errors: list[str] = []
-    constants = REPO / "spinstage-tizen" / "app" / "constants.js"
-    platform_js = REPO / "spinstage-tizen" / "app" / "platform.js"
-    index_path = REPO / "spinstage-tizen" / "index.html"
+    constants = REPO / "spinstage-tizen-beta" / "app" / "constants.js"
+    platform_js = REPO / "spinstage-tizen-beta" / "app" / "platform.js"
+    index_path = REPO / "spinstage-tizen-beta" / "index.html"
     if constants.is_file():
         text = constants.read_text(encoding="utf-8")
         if "export const IS_TIZEN = true;" not in text:
             errors.append("Tizen constants.js missing IS_TIZEN = true patch")
     else:
-        errors.append("Missing spinstage-tizen/app/constants.js")
+        errors.append("Missing spinstage-tizen-beta/app/constants.js")
     if platform_js.is_file():
         text = platform_js.read_text(encoding="utf-8")
         if "return IS_TIZEN || IS_ANDROID;" not in text:
             errors.append("Tizen platform.js missing useTieredFocus patch")
     else:
-        errors.append("Missing spinstage-tizen/app/platform.js")
+        errors.append("Missing spinstage-tizen-beta/app/platform.js")
     if index_path.is_file():
         html = index_path.read_text(encoding="utf-8")
         if 'href="styles/platform-tizen.css"' not in html:
             errors.append(f"{index_path.relative_to(REPO)} missing platform-tizen.css link")
     else:
-        errors.append("Missing spinstage-tizen/index.html")
+        errors.append("Missing spinstage-tizen-beta/index.html")
     return errors
 
 
@@ -242,7 +242,7 @@ def check_platform_trees_synced() -> list[str]:
     platform_roots = (
         REPO / "spinstage-android" / "www",
         REPO / "spinstage-webos",
-        REPO / "spinstage-tizen",
+        REPO / "spinstage-tizen-beta",
     )
     for rel in iter_webui_runtime_files():
         rel_posix = rel.relative_to(REPO / "spinstage-webui").as_posix()

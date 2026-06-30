@@ -603,7 +603,7 @@ function cssBackgroundUrl(url) {
 
 const COVER_SQUARE_EPS = 0.06;
 
-const COVER_MAX_VH = 50;
+const COVER_MAX_VH = 37.5;
 
 const _coverAnalyzeCanvas = document.createElement('canvas');
 const _coverAnalyzeCtx = _coverAnalyzeCanvas.getContext('2d', { willReadFrequently: true });
@@ -661,7 +661,8 @@ function analyzeCoverArt(img) {
 
 function getCornerCoverMaxVh() {
     if (IS_ANDROID && window.matchMedia('(orientation: portrait)').matches) return 13.2;
-    return 26.4;
+    if (IS_ANDROID) return 26.4;
+    return 21;
 }
 
 

@@ -2,7 +2,7 @@
 REM Copy to build-install.bat and fill in the SET values below.
 setlocal EnableExtensions
 
-set "PROJECT_DIR=C:\path\to\spinstage-tizen"
+set "PROJECT_DIR=C:\path\to\spinstage-tizen-beta"
 set "TIZEN_CLI=C:\tizen-studio\tools\ide\bin\tizen.bat"
 set "SDB=C:\tizen-studio\tools\sdb.exe"
 set "CERT_PROFILE=spinstage"

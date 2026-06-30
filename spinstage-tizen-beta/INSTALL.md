@@ -87,7 +87,7 @@ If install later fails with certificate errors, re-open Certificate Manager and 
 
 ```bash
 git clone https://github.com/secretlycarl/SpinStage.git
-cd SpinStage/spinstage-tizen
+cd SpinStage/spinstage-tizen-beta
 ```
 
 Optional — skip Connect on first launch:
@@ -105,7 +105,7 @@ python scripts/configure_defaults.py   # or python3
 ### Option A — PowerShell helper (repo)
 
 ```powershell
-cd C:\path\to\spinstage-tizen
+cd C:\path\to\spinstage-tizen-beta-beta
 .\build.ps1
 ```
 
@@ -128,14 +128,14 @@ Copy `build-install.example.bat` → `build-install.bat`, fill in placeholders, 
 Replace paths, profile name, TV IP, and device ID with yours.
 
 ```powershell
-cd C:\path\to\spinstage-tizen
+cd C:\path\to\spinstage-tizen-beta-beta
 
-& "C:\tizen-studio\tools\ide\bin\tizen.bat" build-web -- "C:\path\to\spinstage-tizen"
+& "C:\tizen-studio\tools\ide\bin\tizen.bat" build-web -- "C:\path\to\spinstage-tizen-beta"
 
 & "C:\tizen-studio\tools\ide\bin\tizen.bat" package `
   -t wgt `
   -s spinstage `
-  -- "C:\path\to\spinstage-tizen\.buildResult"
+  -- "C:\path\to\spinstage-tizen-beta\.buildResult"
 ```
 
 Connect to the TV (default SDB port **26101**):
@@ -150,7 +150,7 @@ Use the device name from `sdb devices` as `-t` (often looks like a model or seri
 
 ```powershell
 & "C:\tizen-studio\tools\ide\bin\tizen.bat" install `
-  -n "C:\path\to\spinstage-tizen\.buildResult\SpinStage.wgt" `
+  -n "C:\path\to\spinstage-tizen-beta\.buildResult\SpinStage.wgt" `
   -t YOUR_DEVICE_ID_FROM_SDB_DEVICES
 ```
 

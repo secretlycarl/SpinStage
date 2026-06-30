@@ -91,7 +91,7 @@ python3 scripts/package_release.py --out release-artifacts \
   --ipk "spinstage-webos/com.spinstage_${VERSION}_all.ipk"
 
 # Optional: attach a signed WGT you built on Windows
-# python3 scripts/package_release.py --out release-artifacts --wgt spinstage-tizen/.buildResult/SpinStage.wgt
+# python3 scripts/package_release.py --out release-artifacts --wgt spinstage-tizen-beta/.buildResult/SpinStage.wgt
 ```
 
 Upload everything in `release-artifacts/` to a new GitHub Release.

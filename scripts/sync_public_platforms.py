@@ -19,7 +19,7 @@ ANDROID_ASSETS = (
     REPO / "spinstage-android" / "android" / "app" / "src" / "main" / "assets" / "public"
 )
 WEBOS = REPO / "spinstage-webos"
-TIZEN = REPO / "spinstage-tizen"
+TIZEN = REPO / "spinstage-tizen-beta"
 TIZEN_CONFIG = TIZEN / "config.xml"
 ANDROID_CSS_SRC = Path(__file__).resolve().parent / "sync-assets" / "platform-android.css"
 
@@ -274,7 +274,7 @@ def sync_ma_settings_common() -> None:
         REPO / "scripts",
         REPO / "spinstage-android" / "scripts",
         REPO / "spinstage-webos" / "scripts",
-        REPO / "spinstage-tizen" / "scripts",
+        REPO / "spinstage-tizen-beta" / "scripts",
     ):
         dest_root.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest_root / "ma_settings_common.py")
@@ -326,7 +326,7 @@ def sync_platform_versions(version: str) -> None:
             count=1,
         )
         if count != 1:
-            raise SystemExit("Failed to patch spinstage-tizen/config.xml version")
+            raise SystemExit("Failed to patch spinstage-tizen-beta/config.xml version")
         TIZEN_CONFIG.write_text(text, encoding="utf-8")
 
 
@@ -339,7 +339,7 @@ def main() -> None:
     sync_tizen()
     print(
         f"Synced modular webui{f' v{version}' if version else ''} "
-        f"-> android (www + assets), webos, and tizen"
+        f"-> android (www + assets), webos, and tizen-beta"
     )
 
 

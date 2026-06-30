@@ -16,7 +16,7 @@ After building platform packages:
   python3 scripts/package_release.py \\
     --apk spinstage-android/dist/spinstage-<version>.apk \\
     --ipk spinstage-webos/com.spinstage_0.9.9_all.ipk \\
-    --wgt spinstage-tizen/.buildResult/SpinStage.wgt   # optional; Windows + cert
+    --wgt spinstage-tizen-beta/.buildResult/SpinStage.wgt   # optional; Windows + cert
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from pathlib import Path
 
 PUBLIC = Path(__file__).resolve().parents[1]
 WEBUI = PUBLIC / "spinstage-webui"
-TIZEN = PUBLIC / "spinstage-tizen"
+TIZEN = PUBLIC / "spinstage-tizen-beta"
 VERSION_FILE = WEBUI / "VERSION"
 DEFAULT_OUT = PUBLIC.parent / "release-artifacts"
 
@@ -86,7 +86,7 @@ def zip_tizen_beta(out_dir: Path, version: str) -> Path:
     if dest.exists():
         dest.unlink()
 
-    prefix = "spinstage-tizen"
+    prefix = "spinstage-tizen-beta"
     with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(TIZEN.rglob("*")):
             if not path.is_file() or should_skip(path):
@@ -154,8 +154,8 @@ def main() -> None:
             print("  cd spinstage-webos && npm run package")
             print(f"  … then re-run with --ipk …/com.spinstage_{version}_all.ipk")
         if not args.wgt:
-            print("  cd spinstage-tizen && npm run package   # or .\\build.ps1 on Windows")
-            print(f"  … then re-run with --wgt spinstage-tizen/.buildResult/SpinStage.wgt")
+            print("  cd spinstage-tizen-beta && npm run package   # or .\\build.ps1 on Windows")
+            print(f"  … then re-run with --wgt spinstage-tizen-beta/.buildResult/SpinStage.wgt")
 
 
 if __name__ == "__main__":

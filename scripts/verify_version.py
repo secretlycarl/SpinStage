@@ -18,9 +18,9 @@ WEBOS_APPINFO = REPO / "spinstage-webos" / "appinfo.json"
 PACKAGE_JSONS = (
     REPO / "spinstage-android" / "package.json",
     REPO / "spinstage-webos" / "package.json",
-    REPO / "spinstage-tizen" / "package.json",
+    REPO / "spinstage-tizen-beta" / "package.json",
 )
-TIZEN_CONFIG = REPO / "spinstage-tizen" / "config.xml"
+TIZEN_CONFIG = REPO / "spinstage-tizen-beta" / "config.xml"
 
 
 def read_version() -> str:

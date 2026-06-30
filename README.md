@@ -26,7 +26,7 @@ Overall I'd say this initial release is about 75% where i want the project to be
 | `spinstage-webui-*.zip` | Browser / PC | Unzip, `cd spinstage-webui`, run `./run.sh --open` (or `run.bat` on Windows) |
 | `spinstage-*.apk` | Android | Sideload the APK (`adb install -r …` or copy to device and open) |
 | `com.spinstage_*_all.ipk` | LG webOS TV | Install with [`ares-install`](https://webostv.developer.lge.com/develop/tools/cli-introduction) or [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop) (Developer Mode on the TV either way) |
-| `spinstage-tizen-*-beta.zip` | Samsung Tizen TV (**beta**) | Source + build on Windows — see [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md) (not pre-built; you sign & sideload) |
+| `spinstage-tizen-*-beta.zip` | Samsung Tizen TV (**beta** — not recommended for most users; Android APK on a TV stick is easier) | Source + build on Windows — see [spinstage-tizen-beta/INSTALL.md](spinstage-tizen-beta/INSTALL.md) |
 
 Each release matches a tagged version (see `spinstage-webui/VERSION` in the repo). **No credentials are bundled** in release downloads – use the in-app Connect screen on first launch.
 
@@ -118,9 +118,9 @@ Pair the TV (same Developer Mode setup), then drag/drop the `.ipk` onto Dev Mana
 
 **Not recommended for most users.** Tizen setup is complicated (Samsung dev account, Tizen Studio, per-TV signing certificates, CLI install). The port is **less stable than webOS** — audio and visual quirks on some TVs. For a Samsung living-room TV, sideloading the **Android APK on an Android TV stick/box** is usually simpler.
 
-If you still want Tizen: download `spinstage-tizen-<version>-beta.zip` from [Releases](https://github.com/secretlycarl/SpinStage/releases) (or use `spinstage-tizen/` from this repo), then follow the full guide:
+If you still want Tizen: download `spinstage-tizen-<version>-beta.zip` from [Releases](https://github.com/secretlycarl/SpinStage/releases) (or use `spinstage-tizen-beta/` from this repo), then follow the full guide:
 
-→ [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md)
+→ [spinstage-tizen-beta/INSTALL.md](spinstage-tizen-beta/INSTALL.md)
 
 ## Build from source
 
@@ -234,12 +234,12 @@ Optional: pre-fill `config/user-settings.json` before packaging to skip setup on
 Windows + [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html) required. TV in Developer Mode; you create a signing certificate bound to your TV.
 
 ```powershell
-cd spinstage-tizen
+cd spinstage-tizen-beta
 .\build.ps1
 # then sdb connect + tizen install — see INSTALL.md
 ```
 
-→ [spinstage-tizen/INSTALL.md](spinstage-tizen/INSTALL.md)
+→ [spinstage-tizen-beta/INSTALL.md](spinstage-tizen-beta/INSTALL.md)
 
 ## Skip setup (optional)
 
@@ -259,7 +259,7 @@ Copy `user-settings.json.example` → `config/user-settings.json` (gitignored):
 | Browser | `spinstage-webui/config/user-settings.json` | `python3 scripts/configure_defaults.py` |
 | Android | `spinstage-android/config/user-settings.json` | `python scripts/configure_defaults.py` |
 | webOS | `spinstage-webos/config/user-settings.json` | `python scripts/configure_defaults.py` |
-| Tizen (beta) | `spinstage-tizen/config/user-settings.json` | `python scripts/configure_defaults.py` |
+| Tizen (beta) | `spinstage-tizen-beta/config/user-settings.json` | `python scripts/configure_defaults.py` |
 
 Or env vars: `SPINSTAGE_SERVER`, `SPINSTAGE_PLAYER`, `SPINSTAGE_USERNAME`, `SPINSTAGE_PASSWORD`.
 
@@ -380,7 +380,7 @@ Open a GitHub issue (minimal detail in public) or use private reporting if you'v
 
 **Change code in `spinstage-webui/` only.**
 
-`spinstage-android/www/`, the Gradle assets copy, `spinstage-webos/`, and `spinstage-tizen/` are **sync output**. Edit those directly and your fix disappears next sync.
+`spinstage-android/www/`, the Gradle assets copy, `spinstage-webos/`, and `spinstage-tizen-beta/` are **sync output**. Edit those directly and your fix disappears next sync.
 
 ```bash
 python3 scripts/sync_public_platforms.py
@@ -403,7 +403,7 @@ Commit the webui change **and** the synced trees together.
 |-----------------|---------------------|
 | `spinstage-webui/VERSION` | Canonical semver |
 | `spinstage-android/android/app/build.gradle` | `versionName` + `versionCode` (formula in `scripts/version_utils.py`) |
-| `spinstage-android/package.json`, `spinstage-webos/package.json`, `spinstage-webos/appinfo.json`, `spinstage-tizen/package.json`, `spinstage-tizen/config.xml` | Same semver as `VERSION` |
+| `spinstage-android/package.json`, `spinstage-webos/package.json`, `spinstage-webos/appinfo.json`, `spinstage-tizen-beta/package.json`, `spinstage-tizen-beta/config.xml` | Same semver as `VERSION` |
 | Platform trees (`www/`, webOS / Tizen app/) | `python3 scripts/sync_public_platforms.py` |
 
 ### Don't commit secrets

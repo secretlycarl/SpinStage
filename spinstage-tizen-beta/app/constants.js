@@ -108,7 +108,7 @@ export const GROUP_DISSOLVE_STEP_MS = 350;
 
 export const BROWSE_VIEWS_MAX = 12;
 
-export const ARTIST_PROVIDERS_CACHE_VERSION = 4;
+export const ARTIST_PROVIDERS_CACHE_VERSION = 6;
 
 export const PUBLIC_RUNTIME_CONFIG = true;
 

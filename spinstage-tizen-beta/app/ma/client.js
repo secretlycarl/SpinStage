@@ -636,7 +636,13 @@ export const maClient =
         const albums = await this.maSubresourceCall('music/artists/artist_albums', item, {
             in_library_only: inLibraryOnly,
         }, opts);
-        return Array.isArray(albums) ? albums.filter((i) => i && i.name !== '..') : [];
+        let list = Array.isArray(albums) ? albums.filter((i) => i && i.name !== '..') : [];
+        const pref = opts.preferredProvider;
+        if (pref && h('providerNeedsStrictArtistDiscography', pref)) {
+            const artistName = item?.name || '';
+            list = list.filter((a) => h('albumMatchesBrowseArtist', a, artistName));
+        }
+        return list;
     },
 
     async setShuffle(enabled) {
@@ -941,7 +947,9 @@ export const maClient =
         const extra = {};
         if (opts.inLibraryOnly) extra.in_library_only = true;
         const tracks = await this.maSubresourceCall('music/albums/album_tracks', item, extra, opts);
-        return h('filterAlbumTracks', Array.isArray(tracks) ? tracks : [], item);
+        let filtered = h('filterAlbumTracks', Array.isArray(tracks) ? tracks : [], item);
+        filtered = h('filterAlbumTracksForProvider', filtered, opts.preferredProvider);
+        return filtered;
     },
 
     async podcastEpisodes(item, opts = {}) {
