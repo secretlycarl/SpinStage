@@ -292,6 +292,11 @@ body.touch-ui.show-ui:not(.panel-open) #controls-container {
     bottom: auto;
     transform: translateY(0);
 }
+body.android.touch-ui.android-stack-pending.show-ui:not(.panel-open) #controls-container,
+body.android.touch-ui.android-stack-pending.show-ui:not(.panel-open) .progress-wrapper {
+    visibility: hidden;
+    pointer-events: none;
+}
 @media (orientation: portrait) {
     body.touch-ui #controls-container {
         flex-wrap: nowrap; justify-content: center;
@@ -304,7 +309,13 @@ body.touch-ui.show-ui:not(.panel-open) #controls-container {
     }
     body.touch-ui .btn { margin: 0 4px; }
     body.touch-ui .btn-play { margin: 0 6px; }
-    body.touch-ui #player-stage { transform: translate(-50%, -50%) scale(0.88) !important; }
+    body.touch-ui:not(.dvd-float):not(.art-corner-info) #player-stage {
+        transform: translate(-50%, -50%) scale(0.88) !important;
+    }
+    body.touch-ui.dvd-float #player-stage {
+        left: 0 !important;
+        top: 0 !important;
+    }
     body.touch-ui.show-ui #player-stage {
         transform: translate(-50%, calc(-50% - 32px)) scale(0.88) !important;
     }

@@ -1058,17 +1058,28 @@ function clearShowUiChromeLayoutTimer() {
     }
 }
 
+function getShowUiStageLayoutParams() {
+    if (IS_ANDROID && usesPhoneTypography()) {
+        const landscape = window.matchMedia('(orientation: landscape)').matches;
+        return landscape
+            ? { scale: 0.72, yOffsetPx: 18 }
+            : { scale: 0.88, yOffsetPx: 32 };
+    }
+    return { scale: SHOW_UI_STAGE_SCALE, yOffsetPx: SHOW_UI_STAGE_Y_OFFSET_PX };
+}
+
 /** Predict show-ui stack anchors from layout box + known stage transform (avoids mid-transition measure). */
 function computeShowUiStackAnchors() {
     const info = document.querySelector('.info');
     const cover = document.querySelector('.cover-wrapper');
     if (!playerStage || !info) return null;
 
-    const scale = SHOW_UI_STAGE_SCALE;
+    const { scale, yOffsetPx } = getShowUiStageLayoutParams();
     const vh = window.innerHeight;
-    const stageCenterY = (vh / 2) - SHOW_UI_STAGE_Y_OFFSET_PX;
+    const stageCenterY = (vh / 2) - yOffsetPx;
+    const useCoverOffset = cover && (usesPhoneTypography() || !mainBody.classList.contains('show-ui'));
     const coverLayoutH = cover
-        ? (mainBody.classList.contains('show-ui') ? vh * 0.375 : cover.offsetHeight)
+        ? (useCoverOffset ? cover.offsetHeight : vh * 0.375)
         : 0;
     const coverMargin = cover
         ? (Number.parseFloat(getComputedStyle(cover).marginBottom) || 25)
@@ -1084,21 +1095,57 @@ function computeShowUiStackAnchors() {
     return { infoBottom, artFloor };
 }
 
+function resolveShowUiStackAnchors() {
+    const info = document.querySelector('.info');
+    const cover = document.querySelector('.cover-wrapper');
+    if (!playerStage || !info) return null;
+
+    const deferForHandoff = IS_ANDROID && usesPhoneTypography()
+        && playerStage.classList.contains('stage-handoff');
+    if (deferForHandoff) return null;
+
+    if (IS_ANDROID && usesPhoneTypography()) {
+        void playerStage.offsetHeight;
+        void info.offsetHeight;
+        const infoRect = info.getBoundingClientRect();
+        const coverRect = cover?.getBoundingClientRect();
+        return {
+            infoBottom: infoRect.bottom,
+            artFloor: Math.max(infoRect.bottom, coverRect?.bottom ?? infoRect.bottom),
+        };
+    }
+    return computeShowUiStackAnchors();
+}
+
+function usesAndroidDeferredStackLayout() {
+    return IS_ANDROID && usesPhoneTypography();
+}
+
 function commitShowUiChromeLayout() {
     clearShowUiChromeLayoutTimer();
     showUiChromeEnterActive = true;
     applyShowUiEnterTypography();
     void playerStage?.offsetHeight;
-    const anchors = computeShowUiStackAnchors();
-    if (anchors) {
-        _playbackStackLayoutKey = '';
-        applyPlaybackStackLayout({ immediate: true, force: true, anchors });
+    const androidDeferred = usesAndroidDeferredStackLayout();
+    if (androidDeferred) {
+        mainBody.classList.add('android-stack-pending');
+    } else {
+        const anchors = resolveShowUiStackAnchors();
+        if (anchors) {
+            _playbackStackLayoutKey = '';
+            applyPlaybackStackLayout({ immediate: true, force: true, anchors });
+        }
     }
     progressEnterAnimUntil = Date.now() + PLAYBACK_CHROME_ENTER_MS + 48;
     showUiChromeLayoutTimer = window.setTimeout(() => {
         showUiChromeLayoutTimer = null;
         showUiChromeEnterActive = false;
         playerStage?.classList.remove('stage-handoff');
+        if (androidDeferred) {
+            _playbackStackLayoutKey = '';
+            applyPlaybackStackLayout({ immediate: true, force: true });
+            mainBody.classList.remove('android-stack-pending');
+        }
         settleShowUiTitleMarquee();
     }, PLAYBACK_CHROME_ENTER_MS);
 }
@@ -1106,6 +1153,7 @@ function commitShowUiChromeLayout() {
 function clearStackLayoutAnimationState() {
     clearShowUiChromeLayoutTimer();
     showUiChromeEnterActive = false;
+    mainBody.classList.remove('android-stack-pending');
     playerStage?.classList.remove('stage-handoff');
 }
 

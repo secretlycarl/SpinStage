@@ -20,3 +20,7 @@
 - Controls enter/exit: art, menu tabs, progress, and controls animate together (350ms); no full-size intermediate when leaving float/corner info
 - Controls/progress enter: compute stack positions from final show-ui geometry (no layout probe on art); transition `top`/`bottom` with transform/opacity
 - Tizen performance: media-element audio output, 1MB Sendspin buffer, throttled sync-group catch-up decode, debounced join recovery (skip resync when buffer full), lazy library bootstrap until browse opens
+- Android: fix float mode snapping to top-left in portrait (exclude DVD floater from idle stage transform override)
+- Android: fix progress/controls sitting too high after idle→show-ui in portrait and landscape (live stack measure + post-transition settle)
+- Android: hide controls/progress until stack layout settles after show-ui enter (fixes brief snap too high)
+- Android: media notification small icon uses favicon instead of default plugin icon
