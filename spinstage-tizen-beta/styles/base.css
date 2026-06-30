@@ -1333,7 +1333,8 @@ body.art-corner-info:not(.show-ui) #player-stage #album-line[hidden] {
 }
 
 .progress-wrapper { 
-    position: fixed; left: 50%; bottom: var(--progress-bottom, 200px); width: 70vw;
+    position: fixed; left: 50%; bottom: var(--progress-bottom, 200px);
+    width: var(--progress-track-width, 70vw);
     display: flex; align-items: center; gap: 25px; z-index: 90;
     opacity: 0; transform: translateX(-50%) translateY(var(--playback-chrome-enter-y, 248px));
     transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1359,6 +1360,11 @@ body.show-ui:not(.panel-open) .progress-wrapper { pointer-events: auto; }
 body.show-ui:not(.progress-seekable) .progress-wrapper {
     opacity: 0; visibility: hidden; pointer-events: none;
     height: 0; overflow: hidden; margin: 0; padding: 0; gap: 0;
+}
+@media (orientation: landscape) {
+    body.show-ui:not(.panel-open) .progress-wrapper {
+        --progress-track-width: 56vw;
+    }
 }
 body.show-ui:not(.panel-open) .progress-container { cursor: pointer; position: relative; }
 body.show-ui .progress-container.scrubbing #progress-bar,
