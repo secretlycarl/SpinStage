@@ -103,6 +103,7 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
   <summary>6</summary>
   <br>
   <img src="docs/screenshots/Screenshot%202026-06-29%20213326.png" width="1000">
+  <img src="docs/screenshots/android.png" width="1000">
 </details>
 
 ---
