@@ -102,6 +102,9 @@ import {
     closeNavGenresMenu,
     moveNavGenresMenuFocus,
     activateNavGenreItem,
+    closeNavArtistsMenu,
+    moveNavArtistsMenuFocus,
+    activateNavArtistItem,
 } from './nav.js';
 import {
     isBrowseFilterChipsVisible,
@@ -444,6 +447,7 @@ function pauseUiHideTimer() {
 
 function resumeUiHideTimer() {
     if (state.settingsMenuOpen || state.navMenuOpen || state.navGenresMenuOpen
+        || state.navArtistsMenuOpen
         || state.volumeMenuOpen || state.eqPresetsMenuOpen || state.vizModesMenuOpen
         || state.artDisplayMenuOpen || blocksUiAutoHide()) return;
     if (!mainBody.classList.contains('show-ui')) return;
@@ -1437,6 +1441,10 @@ function activateMenuItem() {
 }
 
 function activateFocused() {
+    if (state.navArtistsMenuOpen) {
+        activateNavArtistItem();
+        return;
+    }
     if (state.navGenresMenuOpen) {
         activateNavGenreItem();
         return;
@@ -1509,6 +1517,7 @@ function moveFocus(delta) {
 
 function isOverlayMenuOpen() {
     return state.settingsMenuOpen || state.navMenuOpen || state.navGenresMenuOpen
+        || state.navArtistsMenuOpen
         || state.volumeMenuOpen || state.eqPresetsMenuOpen || state.vizModesMenuOpen
         || state.artDisplayMenuOpen;
 }
@@ -1665,6 +1674,10 @@ function handleAppBack() {
         uiH('closeVolumeMenu');
         return true;
     }
+    if (state.navArtistsMenuOpen) {
+        closeNavArtistsMenu();
+        return true;
+    }
     if (state.navGenresMenuOpen) {
         closeNavGenresMenu();
         return true;
@@ -1809,6 +1822,28 @@ function handleGlobalKeydown(e) {
 
     if (isPanelOpen()) {
         if (handlePanelKeydown(e, code)) return;
+    }
+
+    if (state.navArtistsMenuOpen) {
+        const KEY_UP = 38;
+        const KEY_DOWN = 40;
+        const KEY_ENTER = 13;
+        if (code === KEY_UP) {
+            e.preventDefault();
+            moveNavArtistsMenuFocus(-1);
+            return;
+        }
+        if (code === KEY_DOWN) {
+            e.preventDefault();
+            moveNavArtistsMenuFocus(1);
+            return;
+        }
+        if (code === KEY_ENTER || code === 403 || code === 457 || e.key === 'Enter') {
+            e.preventDefault();
+            activateNavArtistItem();
+            return;
+        }
+        return;
     }
 
     if (state.navGenresMenuOpen) {

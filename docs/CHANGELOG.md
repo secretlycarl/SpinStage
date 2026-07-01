@@ -24,3 +24,5 @@
 - Android: fix progress/controls sitting too high after idle→show-ui in portrait and landscape (live stack measure + post-transition settle)
 - Android: hide controls/progress until stack layout settles after show-ui enter (fixes brief snap too high)
 - Android: media notification small icon uses favicon instead of default plugin icon
+- Multi-artist tracks: Go to menu shows Artists with picker submenu; web UI uses multi-go-to icon when several performers
+- Android: fix Disable Viz Blur toggle (platform CSS specificity overrode viz-blur-off)

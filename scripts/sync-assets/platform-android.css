@@ -178,6 +178,10 @@ body.android.touch-ui #viz-canvas {
     filter: blur(8px) brightness(1.06) saturate(1.08);
     -webkit-filter: blur(8px) brightness(1.06) saturate(1.08);
 }
+body.android.touch-ui.viz-blur-off #viz-canvas {
+    filter: brightness(1.06) saturate(1.08);
+    -webkit-filter: brightness(1.06) saturate(1.08);
+}
 body.android .panel-back-btn {
     min-width: 34px; min-height: 34px; padding: 6px; margin: 0 0 6px;
     border-radius: 8px;

@@ -924,14 +924,16 @@ async function openBrowsePanelWithStack(stack, options = {}) {
 
 
 
-async function navigateBrowseToArtist(fromMedia) {
+async function navigateBrowseToArtist(fromMedia, artistRef) {
     let media = fromMedia || npH('getNowPlayingMedia');
     if (!media || uiH('isAudiobookItem', media)) return;
     if (!fromMedia && !canNavigateToArtist()) return;
     try {
         await maClient.ensureReady();
         media = await ensureGoToMediaResolved(media) || media;
-        const artistItem = await uiH('resolveArtistItem', media);
+        const artistItem = artistRef
+            ? await uiH('resolveArtistItemFromRef', media, artistRef)
+            : await uiH('resolveArtistItem', media);
         if (!artistItem?.name) {
             uiH('setStatus', 'artist not found', 'error');
             return;
@@ -2339,13 +2341,16 @@ function updateContainerActionFocus() {
 function filterContainerSelfGoToActions(actions, entry) {
     if (!entry?.item || !entrySupportsContainerActions(entry)) return actions;
     const suppressByType = {
-        artist: 'go_artist',
+        artist: ['go_artist', 'go_artists'],
         album: 'go_album',
         playlist: 'go_playlist',
         podcast: 'go_podcast',
     };
     const suppressId = suppressByType[entry.type];
     if (!suppressId) return actions;
+    if (Array.isArray(suppressId)) {
+        return actions.filter((action) => !suppressId.includes(action.id));
+    }
     return actions.filter((action) => action.id !== suppressId);
 }
 
@@ -3868,6 +3873,13 @@ async function executeBrowseMenuAction(action, item, entry) {
             await executeBrowsePlayback(item, { queueOption: 'replace' });
         } else if (action.id === 'shuffle') {
             await executeBrowsePlayback(item, { shuffle: true, queueOption: 'replace' });
+        } else if (action.id === 'go_artists') {
+            const media = await uiH('resolveBrowseGoToNavigationMedia', 'go_artist', item, entryCtx);
+            if (!media) {
+                uiH('setStatus', 'artist not found', 'error');
+                return;
+            }
+            await uiH('openNavArtistsMenu', media);
         } else if (action.id === 'go_artist') {
             const media = await uiH('resolveBrowseGoToNavigationMedia', action.id, item, entryCtx);
             if (!media) {

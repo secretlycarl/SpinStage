@@ -796,6 +796,19 @@ body.touch-ui .player-sync-delay-btn {
 #nav-genres-menu.open { display: flex; }
 #nav-genres-list { display: flex; flex-direction: column; }
 
+#nav-artists-menu {
+    position: fixed; top: 90px; z-index: 4100;
+    min-width: 340px; max-width: min(420px, calc(100vw - 24px));
+    max-height: min(480px, calc(100vh - 120px));
+    display: none; flex-direction: column;
+    background: rgba(12, 12, 12, 0.92); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px; overflow-x: hidden; overflow-y: auto;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+#nav-artists-menu.open { display: flex; }
+#nav-artists-list { display: flex; flex-direction: column; }
+
 #settings-menu {
     position: fixed; top: 90px; z-index: 4100;
     min-width: 340px; max-width: min(420px, calc(100vw - 24px));

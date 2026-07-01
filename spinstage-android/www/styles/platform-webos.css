@@ -64,7 +64,8 @@ body.webos-tv #volume-menu,
 body.webos-tv #eq-presets-menu,
 body.webos-tv #viz-modes-menu,
 body.webos-tv #art-display-menu,
-body.webos-tv #nav-genres-menu {
+body.webos-tv #nav-genres-menu,
+body.webos-tv #nav-artists-menu {
     backdrop-filter: none; -webkit-backdrop-filter: none;
     background: rgba(12, 12, 12, 0.8);
 }

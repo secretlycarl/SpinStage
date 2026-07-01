@@ -998,6 +998,8 @@ async function activateQueueMenuItem() {
             await removeQueueItem(index);
         } else if (action.id === 'reorder') {
             startQueueReorder(index);
+        } else if (action.id === 'go_artists') {
+            await uiH('openNavArtistsMenu', media);
         } else if (action.id === 'go_artist') {
             await uiH('navigateBrowseToArtist', media);
         } else if (action.id === 'go_album') {

@@ -94,6 +94,7 @@ import {
   navGoDetailsBtn,
   navCloseBtn,
   navGenresCloseBtn,
+  navArtistsCloseBtn,
   settingsMenu,
   menuSetupBtn,
   menuShowConnectionBtn,
@@ -635,6 +636,11 @@ import {
   closeNavMenu,
   closeNavGenresMenu,
   openNavGenresMenu,
+  closeNavArtistsMenu,
+  openNavArtistsMenu,
+  moveNavArtistsMenuFocus,
+  activateNavArtistItem,
+  resolveArtistItemFromRef,
   openNavMenu,
   toggleNavMenu,
   moveNavMenuFocus,
@@ -1351,6 +1357,7 @@ function collapseUiForDefaultArtIfIdle() {
     if (getArtDisplayMode() !== 'default') return;
     if (isPanelOpen()) return;
     if (state.settingsMenuOpen || state.navMenuOpen || state.navGenresMenuOpen
+        || state.navArtistsMenuOpen
         || state.volumeMenuOpen || state.eqPresetsMenuOpen || state.vizModesMenuOpen
         || state.artDisplayMenuOpen) return;
     if (mainBody.classList.contains('show-ui')) return;
@@ -1689,6 +1696,63 @@ function primaryFromJoinedArtistStr(str) {
     if (!str || typeof str !== 'string') return '';
     if (!/\s\/\s/.test(str)) return cleanArtistDisplayName(str);
     return cleanArtistDisplayName(str.split(/\s+\/\s+/)[0]);
+}
+
+function splitJoinedArtistNames(str) {
+    if (!str || typeof str !== 'string') return [];
+    if (!/\s+\/\s+/.test(str)) {
+        const single = cleanArtistDisplayName(str);
+        return single ? [single] : [];
+    }
+    return str.split(/\s+\/\s+/).map(cleanArtistDisplayName).filter(Boolean);
+}
+
+function collectTrackArtists(item) {
+    if (!item) return [];
+    const mt = inferMediaType(item) || (item.media_type || '').toLowerCase();
+    const out = [];
+    const seen = new Set();
+    const addRef = (ref) => {
+        const name = cleanArtistDisplayName(typeof ref === 'string' ? ref : ref?.name);
+        if (!name || isProviderLike(name)) return;
+        const key = normalizeForMatch(name);
+        if (seen.has(key)) return;
+        seen.add(key);
+        if (ref && typeof ref === 'object' && ref.name) {
+            out.push(ref);
+        } else {
+            out.push({ name });
+        }
+    };
+    if (mt === 'album' && Array.isArray(item.artists)) {
+        for (const artist of item.artists) addRef(artist);
+        return out;
+    }
+    if (Array.isArray(item.artists)) {
+        for (const artist of item.artists) addRef(artist);
+    }
+    if (out.length <= 1) {
+        for (const name of splitJoinedArtistNames(item.artist_str || item.artist)) {
+            addRef({ name });
+        }
+    }
+    return out;
+}
+
+function hasMultipleGoToArtists(media) {
+    if (!media || isAudiobookItem(media)) return false;
+    const mt = inferMediaType(media) || (media.media_type || '').toLowerCase();
+    if (mt === 'artist') return false;
+    return collectTrackArtists(media).length > 1;
+}
+
+function getArtistGoToPresentation(media) {
+    const multi = hasMultipleGoToArtists(media);
+    return {
+        multi,
+        label: multi ? 'Artists' : 'Go to Artist',
+        icon: (multi && isWebUi()) ? 'multi-go-to.svg' : 'go-to.svg',
+    };
 }
 
 function pickAlbumArtistName(album) {
@@ -5036,7 +5100,9 @@ navBtn.addEventListener('click', () => {
 });
 navGoArtistBtn.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
-    navigateBrowseToArtist();
+    const media = getNowPlayingMedia();
+    if (hasMultipleGoToArtists(media)) void openNavArtistsMenu();
+    else navigateBrowseToArtist();
 });
 navGoAlbumBtn.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
@@ -5065,6 +5131,10 @@ navGoSimilarTracksBtn?.addEventListener('click', () => {
 navGenresCloseBtn?.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
     closeNavGenresMenu();
+});
+navArtistsCloseBtn?.addEventListener('click', () => {
+    if (Date.now() < getIgnoreClickUntil()) return;
+    closeNavArtistsMenu();
 });
 navGoDetailsBtn.addEventListener('click', () => {
     if (Date.now() < getIgnoreClickUntil()) return;
@@ -5391,6 +5461,9 @@ registerUiHandlers({
     getItemDisplayName,
     trackArtistAlbumSubtitle,
     pickDisplayArtistName,
+    collectTrackArtists,
+    hasMultipleGoToArtists,
+    getArtistGoToPresentation,
     pickPodcastName,
     formatAlbumYear,
     formatPodcastEpisodeDate,
@@ -5413,6 +5486,7 @@ registerUiHandlers({
     enrichBrowseItemForGoTo,
     fetchFullMaMedia,
     resolveArtistItem,
+    resolveArtistItemFromRef,
     resolveAlbumItem,
     resolvePodcastShowItem,
     resolvePlaylistItem,
@@ -5450,6 +5524,10 @@ registerUiHandlers({
     dedupeSearchRows,
     closeNavMenu,
     closeNavGenresMenu,
+    closeNavArtistsMenu,
+    openNavArtistsMenu,
+    moveNavArtistsMenuFocus,
+    activateNavArtistItem,
     closeSettingsMenu,
     closeVolumeMenu,
     closeEqPresetsMenu,

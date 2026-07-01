@@ -181,18 +181,40 @@ First run may offer to create `config/user-settings.json`, or use the in-app Con
 
 ### Docker
 
-Run the browser UI as a container on your host. Example files live in `spinstage-webui/`:
+Run the browser UI as a container on your host. Files in `spinstage-webui/`:
 
 - `Dockerfile`
-- `docker-compose.example.yml` — copy to `docker-compose.yml` and edit
+- `docker-compose.yml` (ready to use; copy from `docker-compose.example.yml` if you prefer to customize a local file)
+- `docker-up.sh` — wrapper that passes an explicit compose file path (helps on some Docker installs)
 
 ```bash
 cd spinstage-webui
-cp docker-compose.example.yml docker-compose.yml
-docker compose up -d --build
+./docker-up.sh up -d --build
+# or: docker compose -f ./docker-compose.yml up -d --build
 ```
 
 Open `http://<docker-host>:9728/` from any device on your LAN.
+
+#### Docker troubleshooting
+
+If `docker compose up` prints **`no configuration file provided: not found`** even though `docker-compose.yml` is in the directory, Docker often cannot *read* the path — not that the file is missing.
+
+1. **Confirm the file and try an explicit path:**
+   ```bash
+   pwd -P
+   ls -la docker-compose.yml compose.yml
+   docker compose -f ./docker-compose.yml config
+   ```
+   If `config` works, always use `-f ./docker-compose.yml` or `./docker-up.sh`.
+
+2. **`~/docker/appdata/...` and snap Docker:** Many homelab hosts keep app data under `~/docker/appdata` as a symlink or bind mount outside `$HOME` (Unraid, TrueNAS, etc.). **Snap-installed Docker** cannot access those paths and fails compose discovery. Fixes:
+   - Install Docker from [docker.com](https://docs.docker.com/engine/install/) (apt/deb), not snap, or
+   - Run SpinStage from a directory that resolves inside your real home (e.g. `~/spinstage-webui`), or
+   - Point the stack at a path snap can read.
+
+3. **`COMPOSE_FILE` env var:** If set in your shell, it overrides defaults. Check `echo "$COMPOSE_FILE"` and unset if it points somewhere invalid.
+
+4. **Validate before `up`:** `docker compose -f ./docker-compose.yml config` should print the parsed stack. If that fails, fix the path/Docker install before `up -d --build`.
 
 #### Ports
 

@@ -4,6 +4,7 @@
  */
 import { state } from '../state.js';
 import { IS_TV_REMOTE } from '../constants.js';
+import { isWebUi } from '../platform.js';
 import {
     mainBody,
     navBtn,
@@ -20,6 +21,9 @@ import {
     navGenresMenu,
     navGenresList,
     navGenresCloseBtn,
+    navArtistsMenu,
+    navArtistsList,
+    navArtistsCloseBtn,
 } from '../dom.js';
 import { maClient } from '../ma/client.js';
 import { itemStoredProviderId } from '../util/providers.js';
@@ -87,7 +91,12 @@ function canGoToPlaylist(media) {
 function getGoToTargetsForMedia(media, opts = {}) {
             const targets = [];
             if (canGoToArtist(media)) {
-                targets.push({ id: 'go_artist', label: 'Go to Artist', icon: 'go-to.svg' });
+                const { label, icon, multi } = uiH('getArtistGoToPresentation', media);
+                targets.push({
+                    id: multi ? 'go_artists' : 'go_artist',
+                    label,
+                    icon,
+                });
             }
             if (canGoToAlbum(media)) {
                 targets.push({ id: 'go_album', label: 'Go to Album', icon: 'go-to.svg' });
@@ -131,36 +140,46 @@ function filterBrowseSelfGoToTargets(targets, item, entry) {
 
             if (item?.kind === 'nav') {
                 const navSuppress = {
-                    artist: 'go_artist',
+                    artist: ['go_artist', 'go_artists'],
                     album: 'go_album',
                     playlist: 'go_playlist',
                     podcast: 'go_podcast',
                 };
                 const navId = navSuppress[mt];
-                if (navId) filtered = filtered.filter((target) => target.id !== navId);
+                if (Array.isArray(navId)) {
+                    filtered = filtered.filter((target) => !navId.includes(target.id));
+                } else if (navId) {
+                    filtered = filtered.filter((target) => target.id !== navId);
+                }
             }
 
             if (entryCtx?.item) {
                 const entitySuppress = {
-                    artist: 'go_artist',
+                    artist: ['go_artist', 'go_artists'],
                     album: 'go_album',
                     playlist: 'go_playlist',
                     podcast: 'go_podcast',
                 };
                 const entityId = entitySuppress[mt];
-                if (entityId && browseEntrySameAsItem(entryCtx, item)) {
+                if (Array.isArray(entityId)) {
+                    if (browseEntrySameAsItem(entryCtx, item)) {
+                        filtered = filtered.filter((target) => !entityId.includes(target.id));
+                    }
+                } else if (entityId && browseEntrySameAsItem(entryCtx, item)) {
                     filtered = filtered.filter((target) => target.id !== entityId);
                 }
             }
 
             const contextSuppress = {
-                artist: 'go_artist',
+                artist: ['go_artist', 'go_artists'],
                 album: 'go_album',
                 playlist: 'go_playlist',
                 podcast: 'go_podcast',
             };
             const contextId = contextSuppress[entryCtx?.type];
-            if (contextId) {
+            if (Array.isArray(contextId)) {
+                filtered = filtered.filter((target) => !contextId.includes(target.id));
+            } else if (contextId) {
                 filtered = filtered.filter((target) => target.id !== contextId);
             }
 
@@ -276,7 +295,7 @@ function resolveBrowseGoToMedia(actionId, item, entry) {
             if (actionId === 'go_podcast' && entryCtx.type === 'podcast' && entryCtx.item) {
                 return entryCtx.item;
             }
-            if (actionId === 'go_artist') {
+            if (actionId === 'go_artist' || actionId === 'go_artists') {
                 if (raw) return raw;
                 if (entryCtx.type === 'album' && entryCtx.item) return entryCtx.item;
             }
@@ -424,6 +443,105 @@ async function activateNavGenreItem() {
             await navigateBrowseToGenre(genre);
         }
 
+function loadNavArtistsCache(fromMedia) {
+            const media = fromMedia || npH('getNowPlayingMedia');
+            state.navArtistsSourceMedia = media;
+            state.navArtistsCache = media ? uiH('collectTrackArtists', media) : [];
+        }
+
+function renderNavArtistsMenu() {
+            if (!navArtistsList) return;
+            navArtistsList.innerHTML = '';
+            state.navArtistMenuEls = [];
+            const artists = state.navArtistsCache || [];
+            if (!artists.length) {
+                const empty = document.createElement('div');
+                empty.className = 'panel-divider panel-status';
+                empty.textContent = 'No artists for this item';
+                navArtistsList.appendChild(empty);
+                return;
+            }
+            artists.forEach((artist, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'settings-menu-item';
+                btn.textContent = uiH('cleanArtistDisplayName', artist.name) || 'Artist';
+                btn.addEventListener('click', () => {
+                    state.navArtistFocusIndex = i;
+                    void activateNavArtistItem();
+                });
+                navArtistsList.appendChild(btn);
+                state.navArtistMenuEls.push(btn);
+            });
+        }
+
+function updateNavArtistsMenuFocus() {
+            state.navArtistMenuEls.forEach((el, i) => {
+                el.classList.toggle('focused', i === state.navArtistFocusIndex);
+            });
+            if (!IS_TV_REMOTE) state.navArtistMenuEls[state.navArtistFocusIndex]?.focus();
+        }
+
+function moveNavArtistsMenuFocus(delta) {
+            const total = state.navArtistMenuEls.length;
+            if (!total) return;
+            state.navArtistFocusIndex = (state.navArtistFocusIndex + delta + total) % total;
+            updateNavArtistsMenuFocus();
+        }
+
+async function openNavArtistsMenu(fromMedia, opts = {}) {
+            loadNavArtistsCache(fromMedia);
+            if (state.navMenuOpen) {
+                navMenu.classList.remove('open');
+                navMenu.setAttribute('aria-hidden', 'true');
+            }
+            state.navArtistsMenuOpen = true;
+            mainBody.classList.add('show-ui', 'nav-menu-open');
+            navArtistsMenu.classList.add('open');
+            navArtistsMenu.setAttribute('aria-hidden', 'false');
+            const anchor = opts.anchorEl || navBtn;
+            uiH('positionOverlayMenu', anchor, navArtistsMenu, opts.placement || 'left');
+            renderNavArtistsMenu();
+            state.navArtistFocusIndex = 0;
+            updateNavArtistsMenuFocus();
+        }
+
+function closeNavArtistsMenu(opts = {}) {
+            if (!state.navArtistsMenuOpen) return;
+            state.navArtistsMenuOpen = false;
+            state.navArtistsSourceMedia = null;
+            navArtistsMenu.classList.remove('open');
+            navArtistsMenu.setAttribute('aria-hidden', 'true');
+            state.navArtistMenuEls.forEach((el) => el.classList.remove('focused'));
+            state.navArtistMenuEls = [];
+            if (!opts.skipReturn && state.navMenuOpen) {
+                navMenu.classList.add('open');
+                navMenu.setAttribute('aria-hidden', 'false');
+                updateNavMenuFocus();
+            }
+        }
+
+async function activateNavArtistItem() {
+            const artistRef = state.navArtistsCache[state.navArtistFocusIndex];
+            const media = state.navArtistsSourceMedia || npH('getNowPlayingMedia');
+            if (!artistRef || !media) return;
+            closeNavArtistsMenu({ skipReturn: true });
+            closeNavMenu();
+            await navigateBrowseToArtist(media, artistRef);
+        }
+
+function syncNavGoToPresentation(media) {
+            if (!navGoArtistBtn) return;
+            const { label, icon } = media && canGoToArtist(media)
+                ? uiH('getArtistGoToPresentation', media)
+                : { label: 'Go to Artist', icon: 'go-to.svg' };
+            navGoArtistBtn.textContent = label;
+            const navIcon = navBtn?.querySelector('.top-icon');
+            if (navIcon && isWebUi()) {
+                navIcon.setAttribute('src', `icons/${icon}`);
+            }
+        }
+
 async function resolveActivePlaylistContext() {
             const enqueued = getEnqueuedPlaylists();
             if (enqueued.length >= 1) return enqueued[enqueued.length - 1];
@@ -503,6 +621,42 @@ async function resolveArtistItem(media) {
                 }
             }
             const name = uiH('cleanArtistDisplayName', artist?.name || uiH('pickDisplayArtistName', media) || '');
+            if (!name) return null;
+            const all = await maClient.libraryItems('artists', 0, 2000, { order_by: 'name_sort', search: name });
+            const lower = name.toLowerCase();
+            const exact = all.find((a) => a.name === name || a.name?.toLowerCase() === lower);
+            if (exact) return exact;
+            return all.find((a) => uiH('titlesRoughlyMatch', a.name, name)) || null;
+        }
+
+async function resolveArtistItemFromRef(media, artistRef) {
+            if (!artistRef) return resolveArtistItem(media);
+            if (uiH('inferMediaType', artistRef) === 'artist') {
+                return resolveArtistItem(artistRef);
+            }
+            const provider = artistRef.provider_instance_id || artistRef.provider
+                || itemStoredProviderId(media) || media?.provider_instance_id || media?.provider || 'library';
+            if (artistRef.item_id) {
+                try {
+                    const full = await maClient.send('music/item', {
+                        media_type: 'artist',
+                        item_id: artistRef.item_id,
+                        provider_instance_id_or_domain: provider,
+                    });
+                    if (full?.name) return full;
+                } catch (err) {
+                    console.warn('resolve artist ref item failed:', err);
+                }
+            }
+            if (artistRef.uri) {
+                try {
+                    const full = await maClient.send('music/item_by_uri', { uri: artistRef.uri });
+                    if (full?.name) return full;
+                } catch (err) {
+                    console.warn('resolve artist ref uri failed:', err);
+                }
+            }
+            const name = uiH('cleanArtistDisplayName', artistRef.name || '');
             if (!name) return null;
             const all = await maClient.libraryItems('artists', 0, 2000, { order_by: 'name_sort', search: name });
             const lower = name.toLowerCase();
@@ -707,6 +861,7 @@ async function syncNavMenuState() {
             navGoOtherVersionsBtn.hidden = !avail.hasOtherVersions;
             navGoSimilarTracksBtn.hidden = !avail.hasSimilarTracks;
             navGoDetailsBtn.hidden = !media;
+            syncNavGoToPresentation(media);
             const showNav = hasNavGoToOptions();
             navBtn.hidden = !showNav;
             if (!showNav) {
@@ -777,8 +932,9 @@ async function openNavMenu() {
         }
 
 function closeNavMenu() {
-            if (!state.navMenuOpen && !state.navGenresMenuOpen) return;
+            if (!state.navMenuOpen && !state.navGenresMenuOpen && !state.navArtistsMenuOpen) return;
             closeNavGenresMenu({ skipReturn: true });
+            closeNavArtistsMenu({ skipReturn: true });
             if (!state.navMenuOpen) return;
             state.navMenuOpen = false;
             mainBody.classList.remove('nav-menu-open');
@@ -807,7 +963,12 @@ async function activateNavMenuItem() {
             const item = navMenuItems[state.navMenuFocusIndex];
             if (!item || item.hidden) return;
             if (item === navGoArtistBtn) {
-                await navigateBrowseToArtist();
+                const media = npH('getNowPlayingMedia');
+                if (uiH('hasMultipleGoToArtists', media)) {
+                    await openNavArtistsMenu();
+                } else {
+                    await navigateBrowseToArtist();
+                }
                 return;
             }
             if (item === navGoAlbumBtn) {
@@ -873,6 +1034,11 @@ export {
     openNavGenresMenu,
     moveNavGenresMenuFocus,
     activateNavGenreItem,
+    closeNavArtistsMenu,
+    openNavArtistsMenu,
+    moveNavArtistsMenuFocus,
+    activateNavArtistItem,
+    resolveArtistItemFromRef,
     canNavigateToArtist,
     canNavigateToAlbum,
     canNavigateToPodcast,
