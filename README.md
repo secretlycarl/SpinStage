@@ -112,8 +112,9 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
 - Tizen beta version and setup docs
 - Misc android UI tweaks
 - Improved transition of now playing accent/bg art change on new media
+- Multi-artist tracks: "Go to" menu shows Artists with picker submenu
 
-see full list at...
+See the full list at [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 ## Before you start (all platforms)
 
