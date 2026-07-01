@@ -5,7 +5,7 @@
 
 Thanks for checking out my project! SpinStage is a [Music Assistant](https://music-assistant.io/)-integrated audio visualizer, [Sendspin](https://github.com/music-assistant/sendspin) player, and library browser for browser, Android, LG webOS, and Samsung Tizen (beta). Demo video will be added soon, screenshots below.
 
-I've had an idea for a cross-platform music player/visualizer (particularly TV) for a while but I could never find anything that scratched my itch. Of course there's Milkdrop, a ton of audio-reactive Wallpaper Engine wallpapers, and many others. I always wondered why more music apps don't have them. As I was setting up Music Assistant I came across [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) and it was the perfect framework for my idea, so I (Cursor) got to work.
+I've had an idea for a cross-platform music player/visualizer (particularly TV) for a while but I could never find anything that scratched my itch. Of course there's Milkdrop, a ton of audio-reactive Wallpaper Engine wallpapers, and many others, but I always wondered why more music apps don't have them integrated. As I was setting up Music Assistant I came across [sendspin-cinema-webos](https://github.com/zonya/sendspin-cinema-webos) and it was the perfect framework for my idea, so I (Cursor) got to work.
 
 > **Unofficial client.** SpinStage is a third-party app. It is **not affiliated with, endorsed by, or maintained by** the [Music Assistant](https://music-assistant.io/) project.
 
@@ -106,7 +106,14 @@ It has ways to interact with most MA browsing / playback / player functions. Mor
   <img src="docs/screenshots/android.png" width="1000">
 </details>
 
----
+## v1.1.0 Changes
+- Added Docker setup instructions and example compose
+- Device sync behavior tweaks
+- Tizen beta version and setup docs
+- Misc android UI tweaks
+- Improved transition of now playing accent/bg art change on new media
+
+see full list at...
 
 ## Before you start (all platforms)
 
@@ -330,8 +337,6 @@ Or env vars: `SPINSTAGE_SERVER`, `SPINSTAGE_PLAYER`, `SPINSTAGE_USERNAME`, `SPIN
 Build-time prefill skips the setup wizard on first launch. After Connect, credentials are saved on-device (see [Security](#security)) so restarts stay signed in.
 
 **Don't commit or share `user-settings.json`.**
-
----
 
 ## Remote access
 
